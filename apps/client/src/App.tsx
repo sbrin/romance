@@ -10,6 +10,10 @@ import {
   QUEUE_JOIN_STATUS,
   RoleSelectRequestSchema,
   RoleSelectResponseSchema,
+  SessionStartRequestSchema,
+  SessionStartResponseSchema,
+  SessionStartedEventSchema,
+  SESSION_START_STATUS,
   SOCKET_EVENT,
   SocketAuthSchema,
   type QueueJoinResponse,
@@ -57,6 +61,14 @@ function App() {
         return
       }
       dispatch({ type: 'PARTNER_CANCELLED', sessionId: parsed.data.sessionId })
+    })
+
+    socket.on(SOCKET_EVENT.SESSION_STARTED, (payload: unknown) => {
+      const parsed = SessionStartedEventSchema.safeParse(payload)
+      if (!parsed.success) {
+        return
+      }
+      dispatch({ type: 'SESSION_STARTED', sessionId: parsed.data.sessionId })
     })
 
     socket.on('connect_error', () => {
@@ -192,6 +204,32 @@ function App() {
     dispatch({ type: 'START_SEARCH' })
   }
 
+  const handleStartSession = async () => {
+    if (!state.sessionId) {
+      dispatch({ type: 'ERROR', message: 'Сессия не найдена.' })
+      return
+    }
+
+    dispatch({ type: 'START_PRESSED' })
+
+    try {
+      const request = SessionStartRequestSchema.parse({
+        deviceId: state.deviceId,
+        sessionId: state.sessionId,
+      })
+      const response = await postJson(
+        '/session/start',
+        request,
+        SessionStartResponseSchema
+      )
+      if (response.status === SESSION_START_STATUS.STARTED) {
+        dispatch({ type: 'SESSION_STARTED', sessionId: state.sessionId })
+      }
+    } catch {
+      dispatch({ type: 'START_FAILED', message: 'Не удалось подтвердить старт.' })
+    }
+  }
+
   return (
     <div className="app">
       <div className="video-stage" aria-hidden="true">
@@ -207,7 +245,27 @@ function App() {
           )}
           {state.uiState === 'START_SEARCH' && <StartSearch onStart={handleStartSearch} />}
           {state.uiState === 'QUEUE' && <QueueStatus onCancel={handleCancelSearch} />}
-          {state.uiState === 'PARTNER_FOUND' && <PartnerFound onCancel={handleCancelSearch} />}
+          {state.uiState === 'PARTNER_FOUND' && (
+            <PartnerFound
+              status="idle"
+              onCancel={handleCancelSearch}
+              onStart={handleStartSession}
+            />
+          )}
+          {state.uiState === 'WAITING_FOR_START' && (
+            <PartnerFound
+              status="waiting"
+              onCancel={handleCancelSearch}
+              onStart={handleStartSession}
+            />
+          )}
+          {state.uiState === 'SESSION_STARTED' && (
+            <PartnerFound
+              status="started"
+              onCancel={handleCancelSearch}
+              onStart={handleStartSession}
+            />
+          )}
           {state.uiState === 'PARTNER_CANCELLED' && (
             <PartnerCancelled onStart={handleStartSearch} />
           )}

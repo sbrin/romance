@@ -22,6 +22,9 @@ const buildApp = () => {
       cancelled.push({ deviceId, sessionId: payload.sessionId });
       return true;
     },
+    emitSessionStarted: (deviceId, payload) => {
+      return true;
+    },
   };
 
   registerSearchingRoutes(fastify, { store, socketHub, sessionService });

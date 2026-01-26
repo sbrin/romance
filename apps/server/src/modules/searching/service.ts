@@ -101,7 +101,8 @@ export const cancelSearch = (store: Store, deviceId: string): CancelResult => {
     if (
       session &&
       (session.state === SESSION_STATE.PARTNER_FOUND ||
-        session.state === SESSION_STATE.WAITING_FOR_START)
+        session.state === SESSION_STATE.WAITING_FOR_START ||
+        session.state === SESSION_STATE.ACTIVE)
     ) {
       const [first, second] = session.userIds;
       if (first === deviceId || second === deviceId) {

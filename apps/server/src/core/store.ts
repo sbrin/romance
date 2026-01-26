@@ -13,6 +13,7 @@ export type Session = {
   userIds: [string, string];
   state: SessionState;
   createdAt: string;
+  startedUserIds: string[];
 };
 
 export type Store = {

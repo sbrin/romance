@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import { createStore } from './core/store';
 import { createSocketHub } from './core/socket';
 import { registerSearchingRoutes } from './modules/searching';
+import { registerSessionRoutes } from './modules/session';
 import { createSessionService } from './modules/session/service';
 
 const fastify = Fastify({ logger: true });
@@ -27,6 +28,10 @@ fastify.get('/ping', async () => ({
 
 registerSearchingRoutes(fastify, {
   store,
+  socketHub,
+  sessionService,
+});
+registerSessionRoutes(fastify, {
   socketHub,
   sessionService,
 });

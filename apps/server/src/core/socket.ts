@@ -2,6 +2,7 @@ import type { Server } from 'socket.io';
 import {
   PartnerCancelledEventSchema,
   PartnerFoundEventSchema,
+  SessionStartedEventSchema,
   SocketAuthSchema,
   SOCKET_EVENT,
 } from '@romance/shared';
@@ -10,6 +11,7 @@ import { ensureUser, type Store } from './store';
 export type SocketHub = {
   emitPartnerFound: (deviceId: string, payload: { sessionId: string }) => boolean;
   emitPartnerCancelled: (deviceId: string, payload: { sessionId: string }) => boolean;
+  emitSessionStarted: (deviceId: string, payload: { sessionId: string }) => boolean;
 };
 
 export const createSocketHub = (io: Server, store: Store): SocketHub => {
@@ -48,6 +50,14 @@ export const createSocketHub = (io: Server, store: Store): SocketHub => {
       const user = store.users.get(deviceId);
       if (!user?.socketId) return false;
       io.to(user.socketId).emit(SOCKET_EVENT.PARTNER_CANCELLED, parsed.data);
+      return true;
+    },
+    emitSessionStarted: (deviceId, payload) => {
+      const parsed = SessionStartedEventSchema.safeParse(payload);
+      if (!parsed.success) return false;
+      const user = store.users.get(deviceId);
+      if (!user?.socketId) return false;
+      io.to(user.socketId).emit(SOCKET_EVENT.SESSION_STARTED, parsed.data);
       return true;
     },
   };

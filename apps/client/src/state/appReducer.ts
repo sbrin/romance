@@ -5,6 +5,8 @@ export type UiState =
   | 'START_SEARCH'
   | 'QUEUE'
   | 'PARTNER_FOUND'
+  | 'WAITING_FOR_START'
+  | 'SESSION_STARTED'
   | 'PARTNER_CANCELLED'
 
 export type AppState = {
@@ -22,6 +24,9 @@ export type AppAction =
   | { type: 'RETURN_TO_START'; error?: string | null }
   | { type: 'PARTNER_FOUND'; sessionId: string }
   | { type: 'PARTNER_CANCELLED'; sessionId: string }
+  | { type: 'START_PRESSED' }
+  | { type: 'START_FAILED'; message: string }
+  | { type: 'SESSION_STARTED'; sessionId: string }
   | { type: 'ROLE_REQUIRED' }
   | { type: 'ERROR'; message: string }
 
@@ -79,14 +84,47 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         uiState: 'PARTNER_FOUND',
         error: null,
       }
-    case 'PARTNER_CANCELLED':
-      if (state.uiState !== 'PARTNER_FOUND' || state.sessionId !== action.sessionId) {
+    case 'PARTNER_CANCELLED': {
+      const cancellableStates: UiState[] = [
+        'PARTNER_FOUND',
+        'WAITING_FOR_START',
+        'SESSION_STARTED',
+      ]
+      if (!cancellableStates.includes(state.uiState) || state.sessionId !== action.sessionId) {
         return state
       }
       return {
         ...state,
         sessionId: null,
         uiState: 'PARTNER_CANCELLED',
+        error: null,
+      }
+    }
+    case 'START_PRESSED':
+      if (state.uiState !== 'PARTNER_FOUND' || !state.sessionId) {
+        return state
+      }
+      return {
+        ...state,
+        uiState: 'WAITING_FOR_START',
+        error: null,
+      }
+    case 'START_FAILED':
+      return {
+        ...state,
+        uiState: 'PARTNER_FOUND',
+        error: action.message,
+      }
+    case 'SESSION_STARTED':
+      if (
+        state.sessionId !== action.sessionId ||
+        (state.uiState !== 'PARTNER_FOUND' && state.uiState !== 'WAITING_FOR_START')
+      ) {
+        return state
+      }
+      return {
+        ...state,
+        uiState: 'SESSION_STARTED',
         error: null,
       }
     case 'ROLE_REQUIRED':

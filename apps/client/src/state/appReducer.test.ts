@@ -39,6 +39,69 @@ test('partner_cancelled clears session but keeps role', () => {
   assert.equal(next.role, USER_ROLE.MALE)
 })
 
+test('partner_cancelled works from session_started state', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const started = appReducer(matched, {
+    type: 'SESSION_STARTED',
+    sessionId: 'session-abcdef12',
+  })
+  const next = appReducer(started, {
+    type: 'PARTNER_CANCELLED',
+    sessionId: 'session-abcdef12',
+  })
+
+  assert.equal(next.uiState, 'PARTNER_CANCELLED')
+  assert.equal(next.sessionId, null)
+})
+
+test('start_pressed moves to waiting for start', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const next = appReducer(matched, { type: 'START_PRESSED' })
+
+  assert.equal(next.uiState, 'WAITING_FOR_START')
+  assert.equal(next.sessionId, 'session-abcdef12')
+})
+
+test('session_started moves to session started state', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const waiting = appReducer(matched, { type: 'START_PRESSED' })
+  const next = appReducer(waiting, {
+    type: 'SESSION_STARTED',
+    sessionId: 'session-abcdef12',
+  })
+
+  assert.equal(next.uiState, 'SESSION_STARTED')
+  assert.equal(next.sessionId, 'session-abcdef12')
+})
+
+test('start_failed returns to partner_found and sets error', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const waiting = appReducer(matched, { type: 'START_PRESSED' })
+  const next = appReducer(waiting, {
+    type: 'START_FAILED',
+    message: 'Не удалось подтвердить старт.',
+  })
+
+  assert.equal(next.uiState, 'PARTNER_FOUND')
+  assert.equal(next.error, 'Не удалось подтвердить старт.')
+})
+
 test('return_to_start clears session but keeps role', () => {
   const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
   const searching = appReducer(initial, { type: 'START_SEARCH' })

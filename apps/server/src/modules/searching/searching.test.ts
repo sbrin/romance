@@ -74,3 +74,27 @@ test('cancelSearch clears partner_found session and removes users', () => {
   assert.equal(male.status, undefined);
   assert.equal(female.status, undefined);
 });
+
+test('cancelSearch clears active session and removes users', () => {
+  const store = createStore();
+  const sessionService = createSessionService(store);
+  const male = ensureUser(store, 'device-m');
+  male.role = USER_ROLE.MALE;
+  const female = ensureUser(store, 'device-f');
+  female.role = USER_ROLE.FEMALE;
+
+  joinQueueAndSearch(store, 'device-m', sessionService);
+  const result = joinQueueAndSearch(store, 'device-f', sessionService);
+  assert.equal(result.status, QUEUE_JOIN_STATUS.PARTNER_FOUND);
+  result.session.state = SESSION_STATE.ACTIVE;
+
+  const cancelled = cancelSearch(store, 'device-m');
+  assert.equal(cancelled.status, 'CANCELLED');
+  assert.equal(cancelled.partnerId, 'device-f');
+  assert.equal(cancelled.sessionId, result.session.id);
+  assert.equal(store.sessions.has(result.session.id), false);
+  assert.equal(male.sessionId, undefined);
+  assert.equal(female.sessionId, undefined);
+  assert.equal(male.status, undefined);
+  assert.equal(female.status, undefined);
+});

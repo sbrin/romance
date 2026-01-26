@@ -129,3 +129,21 @@ test('emitPartnerCancelled sends partner_cancelled event to connected socket', (
   const rejected = socketHub.emitPartnerCancelled('device-9999', { sessionId: 'short' });
   assert.equal(rejected, false);
 });
+
+test('emitSessionStarted sends session_started event to connected socket', () => {
+  const store = createStore();
+  const io = new FakeServer();
+  const socketHub = createSocketHub(io as unknown as Server, store);
+
+  const socket = new FakeSocket('socket-5', { deviceId: 'device-7777' });
+  io.triggerConnection(socket);
+
+  const sent = socketHub.emitSessionStarted('device-7777', { sessionId: 'session-7777' });
+  assert.equal(sent, true);
+  assert.equal(io.sent.length, 1);
+  assert.equal(io.sent[0].to, 'socket-5');
+  assert.equal(io.sent[0].event, SOCKET_EVENT.SESSION_STARTED);
+
+  const rejected = socketHub.emitSessionStarted('device-7777', { sessionId: 'short' });
+  assert.equal(rejected, false);
+});

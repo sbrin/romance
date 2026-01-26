@@ -44,9 +44,21 @@ export const QUEUE_CANCEL_STATUS = {
   OK: 'OK',
 } as const;
 
+export const SESSION_START_STATUS = {
+  WAITING: 'WAITING',
+  STARTED: 'STARTED',
+} as const;
+export const SESSION_START_STATUSES = [
+  SESSION_START_STATUS.WAITING,
+  SESSION_START_STATUS.STARTED,
+] as const;
+export const SessionStartStatusSchema = z.enum(SESSION_START_STATUSES);
+export type SessionStartStatus = z.infer<typeof SessionStartStatusSchema>;
+
 export const SOCKET_EVENT = {
   PARTNER_FOUND: 'partner_found',
   PARTNER_CANCELLED: 'partner_cancelled',
+  SESSION_STARTED: 'session_started',
 } as const;
 export type SocketEvent = (typeof SOCKET_EVENT)[keyof typeof SOCKET_EVENT];
 
@@ -114,6 +126,17 @@ export const QueueCancelResponseSchema = z.object({
 });
 export type QueueCancelResponse = z.infer<typeof QueueCancelResponseSchema>;
 
+export const SessionStartRequestSchema = z.object({
+  deviceId: DeviceIdSchema,
+  sessionId: SessionIdSchema,
+});
+export type SessionStartRequest = z.infer<typeof SessionStartRequestSchema>;
+
+export const SessionStartResponseSchema = z.object({
+  status: SessionStartStatusSchema,
+});
+export type SessionStartResponse = z.infer<typeof SessionStartResponseSchema>;
+
 export const PartnerFoundEventSchema = z.object({
   sessionId: SessionIdSchema,
 });
@@ -123,6 +146,11 @@ export const PartnerCancelledEventSchema = z.object({
   sessionId: SessionIdSchema,
 });
 export type PartnerCancelledEvent = z.infer<typeof PartnerCancelledEventSchema>;
+
+export const SessionStartedEventSchema = z.object({
+  sessionId: SessionIdSchema,
+});
+export type SessionStartedEvent = z.infer<typeof SessionStartedEventSchema>;
 
 export const SocketAuthSchema = z.object({
   deviceId: DeviceIdSchema,
