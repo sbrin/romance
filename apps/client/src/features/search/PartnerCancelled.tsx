@@ -8,7 +8,7 @@ type PartnerCancelledProps = {
 const PartnerCancelled = ({ onRestart }: PartnerCancelledProps) => {
   return (
     <StatusOverlay badge="Чат отменен" title="Партнер отменил чат">
-      <PrimaryActionButton onClick={onRestart}>Начать заново</PrimaryActionButton>
+      <PrimaryActionButton onClick={onRestart}>Начать поиск</PrimaryActionButton>
     </StatusOverlay>
   )
 }

@@ -1,7 +1,17 @@
-Always check and follow "packages/shared/contracts-core-flow.md". Update this
-contracts file when contracts change.
+Приложение состоит из клиентской серверной части:
 
-## Задача считается выполненной, если:
+- ./apps/client
+- ./apps/server
+
+Основа любых изменений - документация ./docs/
+
+## CONTRACTS
+
+Always check and follow "packages/shared/contracts-core-flow.md".
+
+Update the contracts file when contracts change.
+
+## DEFINITION OF DONE
 
 0. Весь код покрыт юнит-тестами.
 1. Код написан на TypeScript без `any`.

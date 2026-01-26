@@ -1,6 +1,11 @@
 import type { UserRole } from '@romance/shared'
 
-export type UiState = 'ROLE_SELECT' | 'QUEUE' | 'PARTNER_FOUND' | 'PARTNER_CANCELLED'
+export type UiState =
+  | 'ROLE_SELECT'
+  | 'START_SEARCH'
+  | 'QUEUE'
+  | 'PARTNER_FOUND'
+  | 'PARTNER_CANCELLED'
 
 export type AppState = {
   deviceId: string
@@ -12,8 +17,9 @@ export type AppState = {
 
 export type AppAction =
   | { type: 'ROLE_SELECTED'; role: UserRole }
+  | { type: 'START_SEARCH' }
   | { type: 'QUEUE_JOINED' }
-  | { type: 'QUEUE_CANCELLED' }
+  | { type: 'RETURN_TO_START'; error?: string | null }
   | { type: 'PARTNER_FOUND'; sessionId: string }
   | { type: 'PARTNER_CANCELLED'; sessionId: string }
   | { type: 'ROLE_REQUIRED' }
@@ -27,7 +33,7 @@ export const createInitialState = (
     deviceId,
     role,
     sessionId: null,
-    uiState: role ? 'QUEUE' : 'ROLE_SELECT',
+    uiState: role ? 'START_SEARCH' : 'ROLE_SELECT',
     error: null,
   }
 }
@@ -38,6 +44,15 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       return {
         ...state,
         role: action.role,
+        uiState: 'START_SEARCH',
+        error: null,
+      }
+    case 'START_SEARCH':
+      if (!state.role) {
+        return state
+      }
+      return {
+        ...state,
         uiState: 'QUEUE',
         error: null,
       }
@@ -47,16 +62,15 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         uiState: 'QUEUE',
         error: null,
       }
-    case 'QUEUE_CANCELLED':
+    case 'RETURN_TO_START':
       return {
         ...state,
-        role: null,
         sessionId: null,
-        uiState: 'ROLE_SELECT',
-        error: null,
+        uiState: state.role ? 'START_SEARCH' : 'ROLE_SELECT',
+        error: action.error ?? null,
       }
     case 'PARTNER_FOUND':
-      if (!state.role || state.uiState !== 'QUEUE') {
+      if (!state.role || (state.uiState !== 'QUEUE' && state.uiState !== 'START_SEARCH')) {
         return state
       }
       return {
@@ -71,7 +85,6 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
       }
       return {
         ...state,
-        role: null,
         sessionId: null,
         uiState: 'PARTNER_CANCELLED',
         error: null,

@@ -59,7 +59,7 @@
 ## State Model (UI + Session)
 
 - `uiState`:
-  `ROLE_SELECT | QUEUE | PARTNER_FOUND | WAITING_FOR_START | ACTIVE_MY_TURN | ACTIVE_WAIT | TIMEOUT_WARN | SESSION_END | ERROR`
+  `ROLE_SELECT | START_SEARCH | QUEUE | PARTNER_FOUND | WAITING_FOR_START | ACTIVE_MY_TURN | ACTIVE_WAIT | TIMEOUT_WARN | SESSION_END | ERROR`
 - `deviceId`, `role`, `sessionId`, `lastLine`, `choices`, `timerState`
 - Server `SessionState` maps to UI state (server‑first)
 
