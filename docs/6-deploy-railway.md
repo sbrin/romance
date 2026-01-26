@@ -33,7 +33,7 @@
 
 ### Client (`apps/client/railway.json`)
 
-- **Build Command**: `pnpm -w --filter @romance/client... build`
+- **Build Command**: `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
 - **Start Command**: `/bin/sh -c "pnpm -C apps/client preview -- --host 0.0.0.0 --port $PORT"`
 
 > Примечание: `preview` использует уже собранные статические файлы из `dist`.
@@ -67,5 +67,5 @@ Root Directory в настройках сервиса — укажи **абсо�
 
 - **Build Command** для server: `pnpm -w --filter @romance/server... build`
 - **Start Command** для server: `pnpm -C apps/server start`
-- **Build Command** для client: `pnpm -w --filter @romance/client... build`
+- **Build Command** для client: `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
 - **Start Command** для client: `/bin/sh -c "pnpm -C apps/client preview -- --host 0.0.0.0 --port $PORT"`
