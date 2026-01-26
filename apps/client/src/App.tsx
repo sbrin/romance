@@ -188,10 +188,6 @@ function App() {
     dispatch({ type: 'RETURN_TO_START' })
   }
 
-  const handleReturnToStart = () => {
-    dispatch({ type: 'RETURN_TO_START' })
-  }
-
   const handleStartSearch = () => {
     dispatch({ type: 'START_SEARCH' })
   }
@@ -213,7 +209,7 @@ function App() {
           {state.uiState === 'QUEUE' && <QueueStatus onCancel={handleCancelSearch} />}
           {state.uiState === 'PARTNER_FOUND' && <PartnerFound onCancel={handleCancelSearch} />}
           {state.uiState === 'PARTNER_CANCELLED' && (
-            <PartnerCancelled onRestart={handleReturnToStart} />
+            <PartnerCancelled onStart={handleStartSearch} />
           )}
         </div>
 
