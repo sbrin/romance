@@ -1,4 +1,22 @@
-# React + TypeScript + Vite
+# @romance/client
+
+## Назначение
+
+Веб-клиент Romance: UI для выбора роли, поиска пары и запуска сессии.
+Общается с сервером по HTTP и Socket.io, хранит `deviceId` и роль локально.
+
+## Функциональные требования
+
+- Работает как SPA, совместимая с деплоем статических файлов.
+- Использует HTTP/WS контракты из `packages/shared/contracts-core-flow.md`.
+- Хранит `deviceId` и выбранную роль локально, чтобы повторно не спрашивать пользователя.
+
+## Обоснование
+
+- Vite preview проверяет `Host` заголовок, поэтому для Railway требуется
+  явно разрешить публичный домен в `preview.allowedHosts`.
+
+## React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

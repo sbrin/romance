@@ -33,8 +33,9 @@
 
 ### Client (`apps/client/railway.json`)
 
-- **Build Command**: `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
-- **Start Command**: `/bin/sh -c "pnpm -C apps/client preview -- --host 0.0.0.0 --port $PORT"`
+- **Build Command**:
+  `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
+- **Start Command**: `pnpm -C apps/client preview --host 0.0.0.0 --port $PORT`
 
 > Примечание: `preview` использует уже собранные статические файлы из `dist`.
 
@@ -57,8 +58,8 @@
 ## 6) Если Railway не подхватил railway.json
 
 В монорепо Railway Config File не «следует» за Root Directory. Если ты менял
-Root Directory в настройках сервиса — укажи **абсолютный путь** к файлу конфигурации
-(например, `/apps/server/railway.json`).
+Root Directory в настройках сервиса — укажи **абсолютный путь** к файлу
+конфигурации (например, `/apps/server/railway.json`).
 
 ## 7) Если билд/старт не применяется
 
@@ -67,5 +68,7 @@ Root Directory в настройках сервиса — укажи **абсо�
 
 - **Build Command** для server: `pnpm -w --filter @romance/server... build`
 - **Start Command** для server: `pnpm -C apps/server start`
-- **Build Command** для client: `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
-- **Start Command** для client: `/bin/sh -c "pnpm -C apps/client preview -- --host 0.0.0.0 --port $PORT"`
+- **Build Command** для client:
+  `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
+- **Start Command** для client:
+  `/bin/sh -c "pnpm -C apps/client preview -- --host 0.0.0.0 --port $PORT"`
