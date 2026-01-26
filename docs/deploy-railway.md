@@ -43,7 +43,18 @@
 
 ### Client
 
-- `VITE_API_BASE_URL` — URL сервера, например: `https://<server>.up.railway.app`
+- `VITE_API_BASE_URL` — URL сервера.
+
+#### Авто‑подхват адреса сервера (Railway Reference Variable)
+
+В Variables сервиса клиента добавь:
+
+```
+VITE_API_BASE_URL=https://${{ @romance/server.RAILWAY_PUBLIC_DOMAIN }}
+```
+
+Где `<server-service-name>` — имя сервиса сервера в Railway. После изменения
+переменной нужен redeploy клиента, так как Vite вшивает env на этапе build.
 
 ### Server
 
