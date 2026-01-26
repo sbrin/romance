@@ -79,7 +79,8 @@ Rate).
 - [ ] Отправляется запрос `POST /queue/join`.
 - [ ] Экран показывает статус "Ищем партнера...".
 - [ ] Реализован polling или WS соединение для ожидания мэтча.
-- [ ] Нельзя перейти дальше, пока сервер не пришлет event `matched`.
+- [ ] Нельзя перейти дальше, пока сервер не пришлет event `partner_found`.
+- [ ] Есть кнопка «Отмена», которая возвращает к выбору роли.
 
 **Notes:**
 
@@ -100,13 +101,14 @@ Rate).
 **Story:** “Как пользователь, я хочу мгновенно узнать, что партнер найден, чтобы
 приготовиться к диалогу”.
 
-**Hypothesis/Metric:** Match Rate (время ожидания).
+**Hypothesis/Metric:** Search Rate (время ожидания).
 
 **Acceptance Criteria (AC):**
 
 - [ ] Сервер соединяет М и Ж из очереди (FIFO).
-- [ ] Оба клиента получают событие `matched` (через WS/SSE или Polling).
+- [ ] Оба клиента получают событие `partner_found` (через WS/SSE или Polling).
 - [ ] Экран меняется на "Партнёр найден!" без перезагрузки страницы.
+- [ ] Есть кнопка «Отмена», которая возвращает к выбору роли.
 
 **Notes:**
 
@@ -344,9 +346,9 @@ Rate).
 **Acceptance Criteria (AC):**
 
 - [ ] Middleware логирует события в structured JSON format.
-- [ ] Список событий: `selected_gender`, `queued`, `matched`, `start_pressed`,
-      `session_started`, `choice_made`, `step_advanced`, `timeout_warn`,
-      `timeout_end`, `disconnect`, `session_end`.
+- [ ] Список событий: `selected_gender`, `queued`, `partner_found`,
+      `start_pressed`, `session_started`, `choice_made`, `step_advanced`,
+      `timeout_warn`, `timeout_end`, `disconnect`, `session_end`.
 - [ ] В каждом событии есть `timestamp` и `session_id`.
 
 **Notes:**

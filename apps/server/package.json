@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "main": "src/app.ts",
   "scripts": {
+    "pretest": "pnpm -C ../../packages/shared build",
     "dev": "tsx watch src/app.ts",
     "build": "tsc",
-    "start": "node dist/app.js"
+    "start": "node dist/app.js",
+    "test": "node --test --import tsx \"src/**/*.test.ts\""
   },
   "devDependencies": {
     "@types/node": "^25.0.10",
@@ -14,6 +16,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@fastify/cors": "^10.0.0",
     "@romance/shared": "workspace:*",
     "dotenv": "^17.2.3",
     "fastify": "^5.7.2",

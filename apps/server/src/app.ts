@@ -1,30 +1,34 @@
 import Fastify from 'fastify';
+import cors from '@fastify/cors';
 import { Server } from 'socket.io';
-import { UserRoleSchema } from '@romance/shared';
+import { createStore } from './core/store';
+import { createSocketHub } from './core/socket';
+import { registerSearchingRoutes } from './modules/searching';
+import { createSessionService } from './modules/session/service';
 
 const fastify = Fastify({ logger: true });
-
+fastify.register(cors, {
+  origin: true,
+});
 const io = new Server(fastify.server, {
   cors: {
     origin: '*',
   },
 });
 
-fastify.get('/ping', async () => {
-  return { status: 'ok', timestamp: new Date().toISOString() };
-});
+const store = createStore();
+const socketHub = createSocketHub(io, store);
+const sessionService = createSessionService(store);
 
-io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
-  
-  socket.on('role:select', (role) => {
-    const result = UserRoleSchema.safeParse(role);
-    if (!result.success) {
-      socket.emit('error', 'Invalid role');
-      return;
-    }
-    console.log('Role selected:', result.data);
-  });
+fastify.get('/ping', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+}));
+
+registerSearchingRoutes(fastify, {
+  store,
+  socketHub,
+  sessionService,
 });
 
 const start = async () => {

@@ -1,0 +1,1 @@
+export { registerSearchingRoutes } from './routes';
