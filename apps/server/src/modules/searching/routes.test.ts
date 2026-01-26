@@ -23,6 +23,8 @@ const buildApp = () => {
       return true;
     },
     emitSessionStarted: (deviceId, payload) => {
+      void deviceId;
+      void payload;
       return true;
     },
   };

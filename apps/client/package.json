@@ -14,7 +14,8 @@
     "@romance/shared": "workspace:*",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.2",

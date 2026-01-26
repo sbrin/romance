@@ -43,11 +43,11 @@ const parseErrorCode = (payload: unknown, fallback: string) => {
   return fallback
 }
 
-export const postJson = async <TResponse>(
+export const postJson = async <TSchema extends z.ZodTypeAny>(
   url: string,
   body: unknown,
-  schema: z.ZodSchema<TResponse>
-): Promise<TResponse> => {
+  schema: TSchema
+): Promise<z.infer<TSchema>> => {
   const response = await fetch(buildUrl(url), {
     method: 'POST',
     headers: {
