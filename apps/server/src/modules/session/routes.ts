@@ -4,14 +4,19 @@ import {
   SessionStartRequestSchema,
   SessionStartResponseSchema,
   SESSION_START_STATUS,
+  USER_ROLE,
   type AnalyticsEvent,
+  type ScenarioActorName,
+  type UserRole,
 } from '@romance/shared';
 import type { SocketHub } from '../../core/socket';
+import type { DialogService } from '../dialog';
 import type { SessionService } from './service';
 
 type Dependencies = {
   socketHub: SocketHub;
   sessionService: SessionService;
+  dialogService: DialogService;
 };
 
 const sendError = (reply: FastifyReply, status: number, code: string) => {
@@ -25,6 +30,9 @@ const logEvent = (
 ) => {
   request.log.info({ event, ts: new Date().toISOString(), ...payload }, 'analytics');
 };
+
+const mapActorToRole = (name: ScenarioActorName): UserRole =>
+  name === 'He' ? USER_ROLE.MALE : USER_ROLE.FEMALE;
 
 export const registerSessionRoutes = (
   fastify: FastifyInstance,
@@ -57,6 +65,43 @@ export const registerSessionRoutes = (
             deviceId: result.users[1].deviceId,
             sessionId: result.session.id,
           });
+        }
+
+        if (result.status === 'STARTED') {
+          const stepId = result.session.currentStepId ?? deps.dialogService.rootStepId;
+          if (!result.session.currentStepId) {
+            result.session.currentStepId = stepId;
+          }
+
+          const step = deps.dialogService.getStep(stepId);
+          const turnRole = mapActorToRole(step.actor.name);
+          const turnUser = result.users.find((user) => user.role === turnRole);
+          if (!turnUser) {
+            throw new Error('TURN_DEVICE_NOT_FOUND');
+          }
+          result.session.turnDeviceId = turnUser.deviceId;
+
+          for (const user of result.users) {
+            if (!user.role) {
+              throw new Error('ROLE_REQUIRED');
+            }
+            const previousVideoUrl = result.session.lastVideoByRole[user.role] ?? null;
+            const { payload, videoUrl } = deps.dialogService.createSessionStepEvent({
+              sessionId: result.session.id,
+              stepId,
+              role: user.role,
+              turnDeviceId: result.session.turnDeviceId,
+              previousVideoUrl,
+            });
+            result.session.lastVideoByRole[user.role] = videoUrl;
+            deps.socketHub.emitSessionStep(user.deviceId, payload);
+            logEvent(request, ANALYTICS_EVENT.STEP_SHOWN, {
+              deviceId: user.deviceId,
+              sessionId: result.session.id,
+              stepId,
+              turnDeviceId: result.session.turnDeviceId,
+            });
+          }
         }
 
         const response = SessionStartResponseSchema.parse({

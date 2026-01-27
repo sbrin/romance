@@ -147,3 +147,31 @@ test('emitSessionStarted sends session_started event to connected socket', () =>
   const rejected = socketHub.emitSessionStarted('device-7777', { sessionId: 'short' });
   assert.equal(rejected, false);
 });
+
+test('emitSessionStep sends session_step event to connected socket', () => {
+  const store = createStore();
+  const io = new FakeServer();
+  const socketHub = createSocketHub(io as unknown as Server, store);
+
+  const socket = new FakeSocket('socket-6', { deviceId: 'device-8888' });
+  io.triggerConnection(socket);
+
+  const sent = socketHub.emitSessionStep('device-8888', {
+    sessionId: 'session-12345678',
+    stepId: 'step-12345678',
+    actor: { name: 'He' },
+    bubbleText: 'Привет',
+    choices: [{ id: 'step-abcdef12', text: 'Да' }],
+    videoUrl: 'm1.mp4',
+    turnDeviceId: 'device-8888',
+  });
+  assert.equal(sent, true);
+  assert.equal(io.sent.length, 1);
+  assert.equal(io.sent[0].to, 'socket-6');
+  assert.equal(io.sent[0].event, SOCKET_EVENT.SESSION_STEP);
+
+  const rejected = socketHub.emitSessionStep('device-8888', {
+    sessionId: 'short',
+  });
+  assert.equal(rejected, false);
+});

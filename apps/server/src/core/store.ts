@@ -14,6 +14,9 @@ export type Session = {
   state: SessionState;
   createdAt: string;
   startedUserIds: string[];
+  currentStepId?: string;
+  turnDeviceId?: string;
+  lastVideoByRole: Partial<Record<UserRole, string>>;
 };
 
 export type Store = {

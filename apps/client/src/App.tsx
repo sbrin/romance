@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { io, type Socket } from 'socket.io-client'
 import {
   PartnerCancelledEventSchema,
@@ -8,8 +8,7 @@ import {
   QueueJoinRequestSchema,
   QueueJoinResponseSchema,
   QUEUE_JOIN_STATUS,
-  RoleSelectRequestSchema,
-  RoleSelectResponseSchema,
+  SessionStepEventSchema,
   SessionStartRequestSchema,
   SessionStartResponseSchema,
   SessionStartedEventSchema,
@@ -21,6 +20,7 @@ import {
 } from '@romance/shared'
 import './App.css'
 import { ApiError, API_BASE_URL, postJson } from './api/http'
+import { syncRoleSelection } from './api/roleSync'
 import { appReducer, createInitialState } from './state/appReducer'
 import { getOrCreateDeviceId, getStoredRole, persistRole } from './state/storage'
 import RoleSelect from './features/role/RoleSelect'
@@ -28,6 +28,7 @@ import QueueStatus from './features/queue/QueueStatus'
 import StartSearch from './features/search/StartSearch'
 import PartnerFound from './features/search/PartnerFound'
 import PartnerCancelled from './features/search/PartnerCancelled'
+import SessionStep from './features/session/SessionStep'
 import ScreenFrame from './ui/ScreenFrame'
 
 function App() {
@@ -37,6 +38,13 @@ function App() {
     return createInitialState(deviceId, role)
   })
   const [isSubmittingRole, setIsSubmittingRole] = useState(false)
+  const roleSyncedRef = useRef(false)
+
+  useEffect(() => {
+    if (!state.role) {
+      roleSyncedRef.current = false
+    }
+  }, [state.role])
 
   useEffect(() => {
     const authParsed = SocketAuthSchema.safeParse({ deviceId: state.deviceId })
@@ -71,6 +79,14 @@ function App() {
       dispatch({ type: 'SESSION_STARTED', sessionId: parsed.data.sessionId })
     })
 
+    socket.on(SOCKET_EVENT.SESSION_STEP, (payload: unknown) => {
+      const parsed = SessionStepEventSchema.safeParse(payload)
+      if (!parsed.success) {
+        return
+      }
+      dispatch({ type: 'SESSION_STEP_RECEIVED', payload: parsed.data })
+    })
+
     socket.on('connect_error', () => {
       dispatch({ type: 'ERROR', message: 'Не удалось подключиться к серверу.' })
     })
@@ -86,18 +102,21 @@ function App() {
     }
 
     let cancelled = false
+    const role = state.role
 
     const syncRole = async () => {
-      try {
-        const request = RoleSelectRequestSchema.parse({
-          deviceId: state.deviceId,
-          role: state.role,
-        })
-        await postJson('/role', request, RoleSelectResponseSchema)
-        return true
-      } catch {
-        return false
+      const synced = await syncRoleSelection(state.deviceId, role)
+      if (synced) {
+        roleSyncedRef.current = true
       }
+      return synced
+    }
+
+    const ensureRoleSynced = async () => {
+      if (roleSyncedRef.current) {
+        return true
+      }
+      return syncRole()
     }
 
     const attemptJoinQueue = async () => {
@@ -116,6 +135,18 @@ function App() {
 
     const joinQueue = async () => {
       try {
+        const synced = await ensureRoleSynced()
+        if (cancelled) {
+          return
+        }
+        if (!synced) {
+          dispatch({
+            type: 'RETURN_TO_START',
+            error: 'Не удалось подтвердить роль. Попробуйте еще раз.',
+          })
+          return
+        }
+
         const response = await attemptJoinQueue()
         if (cancelled) {
           return
@@ -128,6 +159,7 @@ function App() {
         }
 
         if (error instanceof ApiError && error.code === 'ROLE_REQUIRED') {
+          roleSyncedRef.current = false
           const synced = await syncRole()
           if (cancelled) {
             return
@@ -179,8 +211,11 @@ function App() {
   const handleSelectRole = async (role: UserRole) => {
     setIsSubmittingRole(true)
     try {
-      const request = RoleSelectRequestSchema.parse({ deviceId: state.deviceId, role })
-      await postJson('/role', request, RoleSelectResponseSchema)
+      const synced = await syncRoleSelection(state.deviceId, role)
+      if (!synced) {
+        throw new Error('ROLE_SYNC_FAILED')
+      }
+      roleSyncedRef.current = true
       persistRole(role)
       dispatch({ type: 'ROLE_SELECTED', role })
     } catch {
@@ -230,10 +265,22 @@ function App() {
     }
   }
 
+  const baseUrl = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : ''
+  const videoSrc = state.currentStep?.videoUrl
+    ? `${baseUrl}/videos/${state.currentStep.videoUrl}`
+    : undefined
+
   return (
     <div className="app">
       <div className="video-stage" aria-hidden="true">
-        <video className="video-stage__video" autoPlay muted loop playsInline />
+        <video
+          className="video-stage__video"
+          autoPlay
+          muted
+          loop
+          playsInline
+          src={videoSrc}
+        />
         <div className="video-stage__scrim" />
         <div className="video-stage__grain" />
       </div>
@@ -264,6 +311,20 @@ function App() {
               status="started"
               onCancel={handleCancelSearch}
               onStart={handleStartSession}
+            />
+          )}
+          {state.uiState === 'ACTIVE_MY_TURN' && state.currentStep && (
+            <SessionStep
+              step={state.currentStep}
+              choices={state.choices}
+              isMyTurn
+            />
+          )}
+          {state.uiState === 'ACTIVE_WAIT' && state.currentStep && (
+            <SessionStep
+              step={state.currentStep}
+              choices={state.choices}
+              isMyTurn={false}
             />
           )}
           {state.uiState === 'PARTNER_CANCELLED' && (

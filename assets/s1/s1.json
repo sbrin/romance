@@ -1,0 +1,353 @@
+{
+  "E1F3EA1A07E0426AA3A80713C5FD0E5C": [
+    {
+      "type": "Text",
+      "id": "2938770C7F79489C88D397D7ED442974",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "He",
+          "avatarPath": "images/1769508464279_Screenshot 2026-01-27 at 14.06.42.png"
+        },
+        "speech": "Ты заходишь в комнату",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "He",
+        "avatarPath": "images/1769508464279_Screenshot 2026-01-27 at 14.06.42.png"
+      },
+      "text": "Ты заходишь в комнату",
+      "next": [
+        "77B0EBAFFA5F42ACBAC516F4280AD59F",
+        "A7665CBBEDF54F1B95AF9E49B8E9C570",
+        "157B37D2777F4F89A5775A402A27EC86"
+      ],
+      "prev": [],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 46,
+          "y": 78.36793530390253
+        },
+        "selected": false,
+        "dragging": false
+      },
+      "choices": {
+        "77B0EBAFFA5F42ACBAC516F4280AD59F": "Да",
+        "A7665CBBEDF54F1B95AF9E49B8E9C570": "Нет",
+        "157B37D2777F4F89A5775A402A27EC86": "Не знаю"
+      },
+      "videoByRole": {
+        "male": "m1",
+        "female": "f1"
+      }
+    },
+    {
+      "type": "Text",
+      "id": "77B0EBAFFA5F42ACBAC516F4280AD59F",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "She",
+          "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+        },
+        "speech": "Ему понравилось",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "She",
+        "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+      },
+      "text": "Ему понравилось",
+      "next": [
+        "D13775C5414E4BC5821F0565B801CFE7",
+        "850D66B048AC49F3B310BE7190ACFA35",
+        "099417C91D4349DCAF40BC5380CF0674"
+      ],
+      "prev": [
+        "2938770C7F79489C88D397D7ED442974"
+      ],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 679.6992514799005,
+          "y": -418.57221841426946
+        },
+        "selected": false,
+        "dragging": false
+      },
+      "choices": {
+        "D13775C5414E4BC5821F0565B801CFE7": "Да",
+        "850D66B048AC49F3B310BE7190ACFA35": "Нет",
+        "099417C91D4349DCAF40BC5380CF0674": "Не знаю"
+      }
+    },
+    {
+      "type": "Text",
+      "id": "A7665CBBEDF54F1B95AF9E49B8E9C570",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "She",
+          "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+        },
+        "speech": "Ему не понравилось",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "She",
+        "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+      },
+      "text": "Ему не понравилось",
+      "next": "end",
+      "prev": [
+        "2938770C7F79489C88D397D7ED442974"
+      ],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 683.6419540269086,
+          "y": 341.4735462423534
+        },
+        "selected": false,
+        "dragging": false
+      }
+    },
+    {
+      "type": "Text",
+      "id": "157B37D2777F4F89A5775A402A27EC86",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "She",
+          "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+        },
+        "speech": "Он захотел банан??",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "She",
+        "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+      },
+      "text": "Он захотел банан??",
+      "next": "end",
+      "prev": [
+        "2938770C7F79489C88D397D7ED442974"
+      ],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 666.1310518528563,
+          "y": 1037.11299653911
+        },
+        "selected": false,
+        "dragging": false
+      }
+    },
+    {
+      "type": "Text",
+      "id": "D13775C5414E4BC5821F0565B801CFE7",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "He",
+          "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+        },
+        "speech": "Бла",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "He",
+        "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+      },
+      "text": "Бла",
+      "next": "end",
+      "prev": [
+        "77B0EBAFFA5F42ACBAC516F4280AD59F"
+      ],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 1489.9632228920166,
+          "y": -934.3537786444977
+        },
+        "selected": false,
+        "dragging": false
+      }
+    },
+    {
+      "type": "Text",
+      "id": "850D66B048AC49F3B310BE7190ACFA35",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "He",
+          "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+        },
+        "speech": "Ла",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "He",
+        "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+      },
+      "text": "Ла",
+      "next": "end",
+      "prev": [
+        "77B0EBAFFA5F42ACBAC516F4280AD59F"
+      ],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 1476.6475156022561,
+          "y": -281.04456261254256
+        },
+        "selected": false,
+        "dragging": false
+      }
+    },
+    {
+      "type": "Text",
+      "id": "099417C91D4349DCAF40BC5380CF0674",
+      "nodeType": "dialogNode",
+      "data": {
+        "actor": {
+          "name": "He",
+          "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+        },
+        "speech": "Шампанского?",
+        "actorList": [
+          {
+            "name": "She",
+            "avatarPath": "images/1769508645069_Screenshot 2026-01-27 at 14.06.44.png"
+          },
+          {
+            "name": "He",
+            "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+          }
+        ],
+        "fieldList": [
+          {
+            "name": "Emotion",
+            "type": "string"
+          }
+        ]
+      },
+      "actor": {
+        "name": "He",
+        "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
+      },
+      "text": "Шампанского?",
+      "next": "end",
+      "prev": [
+        "77B0EBAFFA5F42ACBAC516F4280AD59F"
+      ],
+      "meta": {
+        "type": "dialogNode",
+        "conversationId": "E1F3EA1A07E0426AA3A80713C5FD0E5C",
+        "position": {
+          "x": 1483.767169321266,
+          "y": 403.19211698186655
+        },
+        "selected": false,
+        "dragging": false
+      }
+    }
+  ]
+}

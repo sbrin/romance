@@ -75,7 +75,7 @@
 ## Content Loading (No‑Code Content)
 
 - `apps/client/public/content/scenario.json`
-- `apps/client/public/videos/*`
+- `assets/s1/*` (сервер отдает по `/videos/`)
 - Load via `fetch('/content/scenario.json', { cache: 'no-store' })`
 - Validate with Zod schema
 - Prefetch next video for smooth transitions

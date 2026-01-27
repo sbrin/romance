@@ -86,6 +86,53 @@ test('session_started moves to session started state', () => {
   assert.equal(next.sessionId, 'session-abcdef12')
 })
 
+test('session_step_received sets active state for current device', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const next = appReducer(matched, {
+    type: 'SESSION_STEP_RECEIVED',
+    payload: {
+      sessionId: 'session-abcdef12',
+      stepId: 'step-12345678',
+      actor: { name: 'He' },
+      bubbleText: 'Привет',
+      choices: [{ id: 'step-abcdef12', text: 'Да' }],
+      videoUrl: 'm1.mp4',
+      turnDeviceId: 'device-12345678',
+    },
+  })
+
+  assert.equal(next.uiState, 'ACTIVE_MY_TURN')
+  assert.equal(next.currentStep?.stepId, 'step-12345678')
+  assert.equal(next.choices.length, 1)
+})
+
+test('session_step_received sets waiting state for other device', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const next = appReducer(matched, {
+    type: 'SESSION_STEP_RECEIVED',
+    payload: {
+      sessionId: 'session-abcdef12',
+      stepId: 'step-12345678',
+      actor: { name: 'She' },
+      bubbleText: 'Привет',
+      choices: [{ id: 'step-abcdef12', text: 'Да' }],
+      videoUrl: 'f1.mp4',
+      turnDeviceId: 'device-other',
+    },
+  })
+
+  assert.equal(next.uiState, 'ACTIVE_WAIT')
+  assert.equal(next.turnDeviceId, 'device-other')
+})
+
 test('start_failed returns to partner_found and sets error', () => {
   const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
   const matched = appReducer(initial, {

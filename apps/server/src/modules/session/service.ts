@@ -22,6 +22,7 @@ export const createSessionService = (store: Store): SessionService => ({
       state,
       createdAt: new Date().toISOString(),
       startedUserIds: [],
+      lastVideoByRole: {},
     };
     store.sessions.set(session.id, session);
     return session;

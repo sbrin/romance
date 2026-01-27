@@ -1,4 +1,4 @@
-import type { UserRole } from '@romance/shared'
+import type { SessionStepEvent, UserRole } from '@romance/shared'
 
 export type UiState =
   | 'ROLE_SELECT'
@@ -7,7 +7,16 @@ export type UiState =
   | 'PARTNER_FOUND'
   | 'WAITING_FOR_START'
   | 'SESSION_STARTED'
+  | 'ACTIVE_MY_TURN'
+  | 'ACTIVE_WAIT'
   | 'PARTNER_CANCELLED'
+
+export type SessionStepState = {
+  stepId: string
+  actor: SessionStepEvent['actor']
+  bubbleText: string
+  videoUrl: string
+}
 
 export type AppState = {
   deviceId: string
@@ -15,6 +24,9 @@ export type AppState = {
   sessionId: string | null
   uiState: UiState
   error: string | null
+  currentStep: SessionStepState | null
+  choices: SessionStepEvent['choices']
+  turnDeviceId: string | null
 }
 
 export type AppAction =
@@ -27,6 +39,7 @@ export type AppAction =
   | { type: 'START_PRESSED' }
   | { type: 'START_FAILED'; message: string }
   | { type: 'SESSION_STARTED'; sessionId: string }
+  | { type: 'SESSION_STEP_RECEIVED'; payload: SessionStepEvent }
   | { type: 'ROLE_REQUIRED' }
   | { type: 'ERROR'; message: string }
 
@@ -40,6 +53,9 @@ export const createInitialState = (
     sessionId: null,
     uiState: role ? 'START_SEARCH' : 'ROLE_SELECT',
     error: null,
+    currentStep: null,
+    choices: [],
+    turnDeviceId: null,
   }
 }
 
@@ -73,6 +89,9 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         sessionId: null,
         uiState: state.role ? 'START_SEARCH' : 'ROLE_SELECT',
         error: action.error ?? null,
+        currentStep: null,
+        choices: [],
+        turnDeviceId: null,
       }
     case 'PARTNER_FOUND':
       if (!state.role || (state.uiState !== 'QUEUE' && state.uiState !== 'START_SEARCH')) {
@@ -89,6 +108,8 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         'PARTNER_FOUND',
         'WAITING_FOR_START',
         'SESSION_STARTED',
+        'ACTIVE_MY_TURN',
+        'ACTIVE_WAIT',
       ]
       if (!cancellableStates.includes(state.uiState) || state.sessionId !== action.sessionId) {
         return state
@@ -98,6 +119,9 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         sessionId: null,
         uiState: 'PARTNER_CANCELLED',
         error: null,
+        currentStep: null,
+        choices: [],
+        turnDeviceId: null,
       }
     }
     case 'START_PRESSED':
@@ -127,6 +151,26 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         uiState: 'SESSION_STARTED',
         error: null,
       }
+    case 'SESSION_STEP_RECEIVED':
+      if (!state.sessionId || state.sessionId !== action.payload.sessionId) {
+        return state
+      }
+      return {
+        ...state,
+        uiState:
+          action.payload.turnDeviceId === state.deviceId
+            ? 'ACTIVE_MY_TURN'
+            : 'ACTIVE_WAIT',
+        currentStep: {
+          stepId: action.payload.stepId,
+          actor: action.payload.actor,
+          bubbleText: action.payload.bubbleText,
+          videoUrl: action.payload.videoUrl,
+        },
+        choices: action.payload.choices,
+        turnDeviceId: action.payload.turnDeviceId,
+        error: null,
+      }
     case 'ROLE_REQUIRED':
       return {
         ...state,
@@ -134,6 +178,9 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         sessionId: null,
         uiState: 'ROLE_SELECT',
         error: 'Сначала выберите роль.',
+        currentStep: null,
+        choices: [],
+        turnDeviceId: null,
       }
     case 'ERROR':
       return {

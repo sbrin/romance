@@ -59,6 +59,7 @@ export const SOCKET_EVENT = {
   PARTNER_FOUND: 'partner_found',
   PARTNER_CANCELLED: 'partner_cancelled',
   SESSION_STARTED: 'session_started',
+  SESSION_STEP: 'session_step',
 } as const;
 export type SocketEvent = (typeof SOCKET_EVENT)[keyof typeof SOCKET_EVENT];
 
@@ -68,6 +69,7 @@ export const ANALYTICS_EVENT = {
   PARTNER_FOUND: 'partner_found',
   START_PRESSED: 'start_pressed',
   SESSION_STARTED: 'session_started',
+  STEP_SHOWN: 'step_shown',
   CHOICE_MADE: 'choice_made',
   TIMEOUT_WARN: 'timeout_warn',
   TIMEOUT_END: 'timeout_end',
@@ -80,6 +82,7 @@ export const ANALYTICS_EVENTS = [
   ANALYTICS_EVENT.PARTNER_FOUND,
   ANALYTICS_EVENT.START_PRESSED,
   ANALYTICS_EVENT.SESSION_STARTED,
+  ANALYTICS_EVENT.STEP_SHOWN,
   ANALYTICS_EVENT.CHOICE_MADE,
   ANALYTICS_EVENT.TIMEOUT_WARN,
   ANALYTICS_EVENT.TIMEOUT_END,
@@ -93,6 +96,66 @@ export type DeviceId = z.infer<typeof DeviceIdSchema>;
 
 export const SessionIdSchema = z.string().min(8);
 export type SessionId = z.infer<typeof SessionIdSchema>;
+
+export const StepIdSchema = z.string().min(8);
+export type StepId = z.infer<typeof StepIdSchema>;
+
+export const ScenarioActorNameSchema = z.enum(['He', 'She']);
+export type ScenarioActorName = z.infer<typeof ScenarioActorNameSchema>;
+
+export const ScenarioActorSchema = z
+  .object({
+    name: ScenarioActorNameSchema,
+    avatarPath: z.string().optional(),
+  })
+  .passthrough();
+export type ScenarioActor = z.infer<typeof ScenarioActorSchema>;
+
+export const ScenarioVideoByRoleSchema = z
+  .object({
+    male: z.string().min(1).optional(),
+    female: z.string().min(1).optional(),
+  })
+  .partial();
+export type ScenarioVideoByRole = z.infer<typeof ScenarioVideoByRoleSchema>;
+
+export const ScenarioChoicesSchema = z.record(StepIdSchema, z.string());
+export type ScenarioChoices = z.infer<typeof ScenarioChoicesSchema>;
+
+export const ScenarioNodeSchema = z
+  .object({
+    id: StepIdSchema,
+    actor: ScenarioActorSchema,
+    text: z.string(),
+    prev: z.array(StepIdSchema),
+    choices: ScenarioChoicesSchema.optional(),
+    videoByRole: ScenarioVideoByRoleSchema.optional(),
+  })
+  .passthrough();
+export type ScenarioNode = z.infer<typeof ScenarioNodeSchema>;
+
+export const SessionActorSchema = z.object({
+  name: ScenarioActorNameSchema,
+  avatarPath: z.string().optional(),
+});
+export type SessionActor = z.infer<typeof SessionActorSchema>;
+
+export const SessionStepChoiceSchema = z.object({
+  id: StepIdSchema,
+  text: z.string(),
+});
+export type SessionStepChoice = z.infer<typeof SessionStepChoiceSchema>;
+
+export const SessionStepEventSchema = z.object({
+  sessionId: SessionIdSchema,
+  stepId: StepIdSchema,
+  actor: SessionActorSchema,
+  bubbleText: z.string(),
+  choices: z.array(SessionStepChoiceSchema),
+  videoUrl: z.string().min(1),
+  turnDeviceId: DeviceIdSchema,
+});
+export type SessionStepEvent = z.infer<typeof SessionStepEventSchema>;
 
 export const RoleSelectRequestSchema = z.object({
   deviceId: DeviceIdSchema,

@@ -1,8 +1,14 @@
-# Core Flow Contracts (P0-01..P0-04)
+# Core Flow Contracts (P0-01..P0-05)
 
 Эта спецификация описывает минимальные HTTP/WS контракты для Core Flow.
 
 ## Shared Types
+
+### Naming convention (global rule)
+
+- **Все имена полей в HTTP/WS payload — только `camelCase`.**
+- Snake_case запрещён в контрактах, чтобы не было расхождений между TS и JSON.
+- Если в старых текстах встречается snake_case, см. маппинг ниже.
 
 ### deviceId
 
@@ -16,6 +22,39 @@
 - Маппинг UI:
   - "Мужчина" → `MALE`
   - "Женщина" → `FEMALE`
+
+### scenario_actor_name
+
+- `'He' | 'She'`
+- Источник: `assets/s1/s1.json` → поле `actor.name`.
+- Маппинг на роль для определения хода:
+  - `He` → `MALE` (говорящий)
+  - `She` → `FEMALE` (говорящий)
+
+### step_id
+
+- string, min length 8.
+- Источник: `assets/s1/s1.json` → поле `id`.
+
+### videoId
+
+- string.
+- Идентификатор видео для роли в конкретном шаге.
+
+### video_url
+
+- string.
+- Правило: `<videoId>.mp4` (файл хранится в `assets/s1`, сервер отдает по `/videos/`).
+
+### videoByRole
+
+- object с ключами `male` и/или `female`.
+- Значение: `videoId` (например, `"ABC123"`).
+- Если для роли значение отсутствует — **видео для этой роли не обновляется**.
+- Ключи соответствуют `USER_ROLE` (`MALE` → `male`, `FEMALE` → `female`).
+
+> Внутреннее состояние клиента может хранить `currentStepId`, но в событии
+> `session_step` используется `stepId`.
 
 ## Recommended Client Flow (P0-01..P0-04)
 
@@ -38,6 +77,9 @@
    к экрану «начать поиск» без повторного выбора роли.
 12. (UI) Если отмена происходит после `partner_found` (до старта сессии),
    сервер шлет второму участнику событие `partner_cancelled`.
+13. После `session_started` сервер отправляет событие `session_step` с первым
+   шагом.
+14. Клиент отображает видео, бабл и кнопки выбора ответа на основе `session_step`.
 
 ## HTTP
 
@@ -214,4 +256,38 @@
 **Notes:**
 
 - Событие отправляется обоим пользователям после подтверждения старта.
-- Детали первого шага добавляются в контракте P0-05.
+- Детали первого шага передаются отдельным событием `session_step`.
+
+### Event: session_step
+
+**Payload:** `SessionStepEvent`
+
+```ts
+{
+  sessionId: string;
+  stepId: string;
+  actor: {
+    name: 'He' | 'She';
+    avatarPath?: string;
+  };
+  bubbleText: string;
+  choices: Array<{
+    id: string;
+    text: string;
+  }>;
+  videoUrl: string;
+  turnDeviceId: string;
+}
+```
+
+**Notes:**
+
+- Событие отправляется обоим пользователям после `session_started` и при каждом
+  обновлении шага.
+- `bubbleText` — это `text` из `s1.json`.
+- `choices` строится из `s1.json.choices` (ключ → `id`, значение → `text`).
+- `stepId` — это `current_step.id` из сценария.
+- `videoUrl` формируется из `videoId` по правилу `<videoId>.mp4`.
+- `videoUrl` вычисляется **персонально для каждого клиента**:
+  если для роли есть `videoByRole` в шаге — обновить, иначе оставить предыдущее
+  видео (сервер повторно отправляет последний `videoUrl`).
