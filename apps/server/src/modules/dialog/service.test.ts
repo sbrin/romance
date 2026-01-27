@@ -107,7 +107,9 @@ test('dialog loader rejects invalid scenario', () => {
   assert.ok(Array.isArray(payload.issues))
   const [issue] = payload.issues as Array<{ path?: unknown }>
   assert.ok(issue)
-  assert.equal(typeof issue.path, 'string')
+  if (typeof issue.path !== 'string') {
+    assert.fail('Expected issue.path to be a string')
+  }
   assert.ok(issue.path.includes('scenario'))
 })
 

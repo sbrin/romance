@@ -65,22 +65,28 @@ const defaultLogger: DialogLogger = {
   },
 }
 
-const formatZodPath = (pathItems: (string | number)[]): string => {
+const normalizeZodPath = (pathItems: ReadonlyArray<PropertyKey>): Array<string | number> =>
+  pathItems.map((segment) => (typeof segment === 'symbol' ? String(segment) : segment))
+
+const formatZodPath = (pathItems: Array<string | number>): string => {
   if (pathItems.length === 0) return '(root)'
-  return pathItems.reduce((acc, segment) => {
+  return pathItems.reduce<string>((acc, segment) => {
     if (typeof segment === 'number') return `${acc}[${segment}]`
-    if (acc === '') return segment
+    if (acc === '') return String(segment)
     return `${acc}.${segment}`
   }, '')
 }
 
 const summarizeIssues = (issues: z.ZodIssue[]): ScenarioIssueSummary[] =>
-  issues.map((issue) => ({
-    path: formatZodPath(issue.path),
-    pathArray: issue.path,
-    code: issue.code,
-    message: issue.message,
-  }))
+  issues.map((issue) => {
+    const normalizedPath = normalizeZodPath(issue.path)
+    return {
+      path: formatZodPath(normalizedPath),
+      pathArray: normalizedPath,
+      code: issue.code,
+      message: issue.message,
+    }
+  })
 
 const resolveScenarioPath = (override?: string): string => {
   if (override) return override

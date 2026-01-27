@@ -32,6 +32,11 @@ const buildApp = () => {
       void payload;
       return true;
     },
+    emitSessionEnded: (deviceId, payload) => {
+      void deviceId;
+      void payload;
+      return true;
+    },
   };
 
   registerSearchingRoutes(fastify, { store, socketHub, sessionService });
