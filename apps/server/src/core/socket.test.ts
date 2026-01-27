@@ -175,3 +175,26 @@ test('emitSessionStep sends session_step event to connected socket', () => {
   });
   assert.equal(rejected, false);
 });
+
+test('emitSessionEnded sends session_ended event to connected socket', () => {
+  const store = createStore();
+  const io = new FakeServer();
+  const socketHub = createSocketHub(io as unknown as Server, store);
+
+  const socket = new FakeSocket('socket-7', { deviceId: 'device-5555' });
+  io.triggerConnection(socket);
+
+  const sent = socketHub.emitSessionEnded('device-5555', {
+    sessionId: 'session-5555',
+    reason: 'completed',
+  });
+  assert.equal(sent, true);
+  assert.equal(io.sent.length, 1);
+  assert.equal(io.sent[0].to, 'socket-7');
+  assert.equal(io.sent[0].event, SOCKET_EVENT.SESSION_ENDED);
+
+  const rejected = socketHub.emitSessionEnded('device-5555', {
+    sessionId: 'short',
+  });
+  assert.equal(rejected, false);
+});

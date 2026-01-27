@@ -2,6 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import Fastify, { type FastifyInstance } from 'fastify';
 import {
+  SessionEndedEventSchema,
+  SESSION_ANSWER_STATUS,
+  SESSION_END_REASON,
+  SESSION_END_STATUS,
   SessionStepEventSchema,
   SESSION_RESUME_STATUS,
   SESSION_START_STATUS,
@@ -22,6 +26,7 @@ const buildApp = () => {
   const sessionService = createSessionService(store);
   const started: Array<{ deviceId: string; sessionId: string }> = [];
   const steps: Array<{ deviceId: string; payload: unknown }> = [];
+  const ended: Array<{ deviceId: string; payload: unknown }> = [];
   const rootStep = ScenarioNodeSchema.parse({
     id: 'step-12345678',
     actor: { name: 'He' },
@@ -30,9 +35,26 @@ const buildApp = () => {
     choices: { 'step-abcdef12': 'Да' },
     videoByRole: { male: 'm1', female: 'f1' },
   });
+  const nextStep = ScenarioNodeSchema.parse({
+    id: 'step-abcdef12',
+    actor: { name: 'She' },
+    text: 'Пока',
+    prev: ['step-12345678'],
+    videoByRole: { male: 'm2', female: 'f2' },
+  });
+  const stepsById = new Map([
+    [rootStep.id, rootStep],
+    [nextStep.id, nextStep],
+  ]);
   const dialogService: DialogService = {
     rootStepId: rootStep.id,
-    getStep: () => rootStep,
+    getStep: (stepId) => {
+      const step = stepsById.get(stepId);
+      if (!step) {
+        throw new Error('STEP_NOT_FOUND');
+      }
+      return step;
+    },
     createSessionStepEvent: ({
       sessionId,
       stepId,
@@ -40,14 +62,16 @@ const buildApp = () => {
       turnDeviceId,
       previousVideoUrl,
     }) => {
-      const videoUrl =
-        role === USER_ROLE.MALE ? 'm1.mp4' : previousVideoUrl ?? 'f1.mp4';
+      const step = stepsById.get(stepId) ?? rootStep;
+      const videoId =
+        role === USER_ROLE.MALE ? step.videoByRole?.male : step.videoByRole?.female;
+      const videoUrl = videoId ? `${videoId}.mp4` : previousVideoUrl ?? 'fallback.mp4';
       const payload = SessionStepEventSchema.parse({
         sessionId,
         stepId,
-        actor: { name: rootStep.actor.name },
-        bubbleText: rootStep.text,
-        choices: [{ id: 'step-abcdef12', text: 'Да' }],
+        actor: { name: step.actor.name },
+        bubbleText: step.text,
+        choices: step.choices ? [{ id: 'step-abcdef12', text: 'Да' }] : [],
         videoUrl,
         turnDeviceId,
       });
@@ -65,11 +89,15 @@ const buildApp = () => {
       steps.push({ deviceId, payload });
       return true;
     },
+    emitSessionEnded: (deviceId, payload) => {
+      ended.push({ deviceId, payload });
+      return true;
+    },
   };
 
   registerSearchingRoutes(fastify, { store, socketHub, sessionService });
   registerSessionRoutes(fastify, { store, socketHub, sessionService, dialogService });
-  return { fastify, started, steps };
+  return { fastify, started, steps, ended };
 };
 
 const createMatch = async (fastify: FastifyInstance) => {
@@ -276,5 +304,157 @@ test('POST /session/resume returns waiting for user that already started', async
   const body = response.json();
   assert.equal(body.status, SESSION_RESUME_STATUS.WAITING);
   assert.equal(body.sessionId, sessionId);
+  await fastify.close();
+});
+
+test('POST /session/step/answer returns NOOP when not your turn', async () => {
+  const { fastify, steps } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-f', sessionId },
+  });
+
+  const before = steps.length;
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/step/answer',
+    payload: { deviceId: 'device-f', sessionId, choiceId: 'step-abcdef12' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, SESSION_ANSWER_STATUS.NOOP);
+  assert.equal(steps.length, before);
+  await fastify.close();
+});
+
+test('POST /session/step/answer advances step and emits next step', async () => {
+  const { fastify, steps, ended } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-f', sessionId },
+  });
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/step/answer',
+    payload: { deviceId: 'device-m', sessionId, choiceId: 'step-abcdef12' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, SESSION_ANSWER_STATUS.OK);
+  assert.equal(steps.length, 4);
+  const payloads = steps.slice(-2).map((item) => item.payload);
+  assert.ok(payloads.every((payload) => SessionStepEventSchema.safeParse(payload).success));
+  assert.equal((payloads[0] as { stepId: string }).stepId, 'step-abcdef12');
+  assert.equal(ended.length, 2);
+  assert.ok(
+    ended.every((item) => SessionEndedEventSchema.safeParse(item.payload).success)
+  );
+  await fastify.close();
+});
+
+test('POST /session/step/answer returns 409 for invalid choice', async () => {
+  const { fastify } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-f', sessionId },
+  });
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/step/answer',
+    payload: { deviceId: 'device-m', sessionId, choiceId: 'step-invalid' },
+  });
+
+  assert.equal(response.statusCode, 409);
+  await fastify.close();
+});
+
+test('POST /session/end ends session and returns OK', async () => {
+  const { fastify, ended } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-f', sessionId },
+  });
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/end',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, SESSION_END_STATUS.OK);
+  assert.equal(ended.length, 2);
+  assert.ok(
+    ended.every((item) => {
+      const parsed = SessionEndedEventSchema.safeParse(item.payload);
+      return parsed.success && parsed.data.reason === SESSION_END_REASON.CANCELLED;
+    })
+  );
+  await fastify.close();
+});
+
+test('POST /session/end returns NOOP for finished session', async () => {
+  const { fastify, ended } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-f', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/end',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/end',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, SESSION_END_STATUS.NOOP);
+  assert.equal(ended.length, 2);
   await fastify.close();
 });

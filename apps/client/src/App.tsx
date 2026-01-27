@@ -8,6 +8,12 @@ import {
   QueueJoinRequestSchema,
   QueueJoinResponseSchema,
   QUEUE_JOIN_STATUS,
+  SessionAnswerRequestSchema,
+  SessionAnswerResponseSchema,
+  SessionEndedEventSchema,
+  SessionEndRequestSchema,
+  SessionEndResponseSchema,
+  SESSION_ANSWER_STATUS,
   SessionResumeRequestSchema,
   SessionResumeResponseSchema,
   SESSION_RESUME_STATUS,
@@ -39,6 +45,7 @@ import StartSearch from './features/search/StartSearch'
 import PartnerFound from './features/search/PartnerFound'
 import PartnerCancelled from './features/search/PartnerCancelled'
 import SessionStep from './features/session/SessionStep'
+import SessionEnded from './features/session/SessionEnded'
 import ScreenFrame from './ui/ScreenFrame'
 
 const EXIT_AVAILABLE_STATES: UiState[] = [
@@ -117,13 +124,25 @@ function App() {
       dispatch({ type: 'SESSION_STARTED', sessionId: parsed.data.sessionId })
     })
 
-    socket.on(SOCKET_EVENT.SESSION_STEP, (payload: unknown) => {
-      const parsed = SessionStepEventSchema.safeParse(payload)
-      if (!parsed.success) {
-        return
-      }
-      dispatch({ type: 'SESSION_STEP_RECEIVED', payload: parsed.data })
+  socket.on(SOCKET_EVENT.SESSION_STEP, (payload: unknown) => {
+    const parsed = SessionStepEventSchema.safeParse(payload)
+    if (!parsed.success) {
+      return
+    }
+    dispatch({ type: 'SESSION_STEP_RECEIVED', payload: parsed.data })
+  })
+
+  socket.on(SOCKET_EVENT.SESSION_ENDED, (payload: unknown) => {
+    const parsed = SessionEndedEventSchema.safeParse(payload)
+    if (!parsed.success) {
+      return
+    }
+    dispatch({
+      type: 'SESSION_ENDED',
+      sessionId: parsed.data.sessionId,
+      reason: parsed.data.reason,
     })
+  })
 
     socket.on('connect_error', () => {
       dispatch({ type: 'ERROR', message: 'Не удалось подключиться к серверу.' })
@@ -447,6 +466,51 @@ function App() {
     }
   }
 
+  const handleChoice = async (choiceId: string) => {
+    if (!state.sessionId) {
+      dispatch({ type: 'ERROR', message: 'Сессия не найдена.' })
+      return
+    }
+
+    try {
+      const request = SessionAnswerRequestSchema.parse({
+        deviceId: state.deviceId,
+        sessionId: state.sessionId,
+        choiceId,
+      })
+      const response = await postJson(
+        '/session/step/answer',
+        request,
+        SessionAnswerResponseSchema
+      )
+      if (response.status === SESSION_ANSWER_STATUS.NOOP) {
+        return
+      }
+    } catch {
+      dispatch({ type: 'ERROR', message: 'Не удалось отправить ответ.' })
+    }
+  }
+
+  const handleReturnToQueue = async () => {
+    if (!state.sessionId) {
+      dispatch({ type: 'RETURN_TO_QUEUE' })
+      return
+    }
+
+    try {
+      const request = SessionEndRequestSchema.parse({
+        deviceId: state.deviceId,
+        sessionId: state.sessionId,
+      })
+      await postJson('/session/end', request, SessionEndResponseSchema)
+    } catch {
+      dispatch({ type: 'ERROR', message: 'Не удалось завершить сессию.' })
+      return
+    }
+
+    dispatch({ type: 'RETURN_TO_QUEUE' })
+  }
+
   const baseUrl = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : ''
   const videoSrc = state.currentStep?.videoUrl
     ? `${baseUrl}/videos/${state.currentStep.videoUrl}`
@@ -493,6 +557,7 @@ function App() {
               step={state.currentStep}
               choices={state.choices}
               isMyTurn
+              onChoice={handleChoice}
             />
           )}
           {state.uiState === 'ACTIVE_WAIT' && state.currentStep && (
@@ -501,6 +566,9 @@ function App() {
               choices={state.choices}
               isMyTurn={false}
             />
+          )}
+          {state.uiState === 'SESSION_ENDED' && (
+            <SessionEnded onQueue={handleReturnToQueue} />
           )}
           {state.uiState === 'PARTNER_CANCELLED' && (
             <PartnerCancelled onStart={handleStartSearch} />

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { USER_ROLE } from '@romance/shared'
+import { SESSION_END_REASON, USER_ROLE } from '@romance/shared'
 import { appReducer, createInitialState } from './appReducer'
 
 test('role selection moves to start search state', () => {
@@ -217,6 +217,44 @@ test('return_to_start clears session but keeps role', () => {
   assert.equal(next.uiState, 'START_SEARCH')
   assert.equal(next.sessionId, null)
   assert.equal(next.role, USER_ROLE.FEMALE)
+})
+
+test('session_ended sets end state and reason', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const started = appReducer(matched, {
+    type: 'SESSION_STARTED',
+    sessionId: 'session-abcdef12',
+  })
+  const next = appReducer(started, {
+    type: 'SESSION_ENDED',
+    sessionId: 'session-abcdef12',
+    reason: SESSION_END_REASON.COMPLETED,
+  })
+
+  assert.equal(next.uiState, 'SESSION_ENDED')
+  assert.equal(next.sessionId, 'session-abcdef12')
+  assert.equal(next.sessionEndReason, SESSION_END_REASON.COMPLETED)
+})
+
+test('return_to_queue clears session and moves to queue', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
+  const matched = appReducer(initial, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+  const ended = appReducer(matched, {
+    type: 'SESSION_ENDED',
+    sessionId: 'session-abcdef12',
+    reason: SESSION_END_REASON.COMPLETED,
+  })
+  const next = appReducer(ended, { type: 'RETURN_TO_QUEUE' })
+
+  assert.equal(next.uiState, 'QUEUE')
+  assert.equal(next.sessionId, null)
 })
 
 test('createInitialState restores active session for current device', () => {

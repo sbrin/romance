@@ -1,6 +1,13 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import {
   ANALYTICS_EVENT,
+  SessionAnswerRequestSchema,
+  SessionAnswerResponseSchema,
+  SessionEndRequestSchema,
+  SessionEndResponseSchema,
+  SESSION_ANSWER_STATUS,
+  SESSION_END_REASON,
+  SESSION_END_STATUS,
   SessionResumeRequestSchema,
   SessionResumeResponseSchema,
   SessionStartRequestSchema,
@@ -44,6 +51,37 @@ export const registerSessionRoutes = (
   fastify: FastifyInstance,
   deps: Dependencies
 ) => {
+  const finalizeSession = (
+    request: FastifyRequest,
+    sessionId: string,
+    reason: (typeof SESSION_END_REASON)[keyof typeof SESSION_END_REASON]
+  ) => {
+    const session = deps.store.sessions.get(sessionId);
+    if (!session) {
+      return;
+    }
+
+    session.state = SESSION_STATE.FINISHED;
+    session.currentStepId = undefined;
+    session.turnDeviceId = undefined;
+    session.lastVideoByRole = {};
+
+    for (const memberId of session.userIds) {
+      const member = ensureUser(deps.store, memberId);
+      member.sessionId = undefined;
+      member.status = SESSION_STATE.FINISHED;
+      deps.socketHub.emitSessionEnded(member.deviceId, {
+        sessionId: session.id,
+        reason,
+      });
+      logEvent(request, ANALYTICS_EVENT.SESSION_END, {
+        deviceId: member.deviceId,
+        sessionId: session.id,
+        reason,
+      });
+    }
+  };
+
   fastify.post(
     '/session/resume',
     async (request: FastifyRequest, reply: FastifyReply) => {
@@ -243,6 +281,132 @@ export const registerSessionRoutes = (
         }
         throw error;
       }
+    }
+  );
+
+  fastify.post(
+    '/session/step/answer',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = SessionAnswerRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(reply, 400, 'INVALID_BODY');
+      }
+
+      const { deviceId, sessionId, choiceId } = parsed.data;
+      const session = deps.store.sessions.get(sessionId);
+      if (!session || !session.userIds.includes(deviceId)) {
+        return sendError(reply, 404, 'SESSION_NOT_FOUND');
+      }
+
+      if (session.state !== SESSION_STATE.ACTIVE) {
+        return sendError(reply, 409, 'SESSION_NOT_ACTIVE');
+      }
+
+      if (session.turnDeviceId && session.turnDeviceId !== deviceId) {
+        const response = SessionAnswerResponseSchema.parse({
+          status: SESSION_ANSWER_STATUS.NOOP,
+        });
+        return reply.send(response);
+      }
+
+      const user = ensureUser(deps.store, deviceId);
+      if (!user.role) {
+        return sendError(reply, 409, 'ROLE_REQUIRED');
+      }
+
+      const currentStepId = session.currentStepId ?? deps.dialogService.rootStepId;
+      if (!session.currentStepId) {
+        session.currentStepId = currentStepId;
+      }
+      const currentStep = deps.dialogService.getStep(currentStepId);
+      const choices = currentStep.choices ?? {};
+      if (!Object.prototype.hasOwnProperty.call(choices, choiceId)) {
+        return sendError(reply, 409, 'INVALID_CHOICE');
+      }
+
+      logEvent(request, ANALYTICS_EVENT.CHOICE_MADE, {
+        deviceId,
+        sessionId,
+        stepId: currentStepId,
+        choiceId,
+      });
+
+      const nextStepId = choiceId;
+      const nextStep = deps.dialogService.getStep(nextStepId);
+      const turnRole = mapActorToRole(nextStep.actor.name);
+      const [firstId, secondId] = session.userIds;
+      const firstUser = ensureUser(deps.store, firstId);
+      const secondUser = ensureUser(deps.store, secondId);
+      const turnUser = [firstUser, secondUser].find((member) => member.role === turnRole);
+      if (!turnUser) {
+        throw new Error('TURN_DEVICE_NOT_FOUND');
+      }
+
+      session.currentStepId = nextStepId;
+      session.turnDeviceId = turnUser.deviceId;
+
+      for (const member of [firstUser, secondUser]) {
+        if (!member.role) {
+          throw new Error('ROLE_REQUIRED');
+        }
+        const previousVideoUrl = session.lastVideoByRole[member.role] ?? null;
+        const { payload, videoUrl } = deps.dialogService.createSessionStepEvent({
+          sessionId: session.id,
+          stepId: nextStepId,
+          role: member.role,
+          turnDeviceId: session.turnDeviceId,
+          previousVideoUrl,
+        });
+        session.lastVideoByRole[member.role] = videoUrl;
+        deps.socketHub.emitSessionStep(member.deviceId, payload);
+        logEvent(request, ANALYTICS_EVENT.STEP_SHOWN, {
+          deviceId: member.deviceId,
+          sessionId: session.id,
+          stepId: nextStepId,
+          turnDeviceId: session.turnDeviceId,
+        });
+      }
+
+      const isTerminal =
+        !nextStep.choices || Object.keys(nextStep.choices).length === 0;
+      if (isTerminal) {
+        finalizeSession(request, session.id, SESSION_END_REASON.COMPLETED);
+      }
+
+      const response = SessionAnswerResponseSchema.parse({
+        status: SESSION_ANSWER_STATUS.OK,
+      });
+      return reply.send(response);
+    }
+  );
+
+  fastify.post(
+    '/session/end',
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = SessionEndRequestSchema.safeParse(request.body);
+      if (!parsed.success) {
+        return sendError(reply, 400, 'INVALID_BODY');
+      }
+
+      const { deviceId, sessionId } = parsed.data;
+      const session = deps.store.sessions.get(sessionId);
+      if (!session || !session.userIds.includes(deviceId)) {
+        return sendError(reply, 404, 'SESSION_NOT_FOUND');
+      }
+
+      if (session.state === SESSION_STATE.FINISHED) {
+        const response = SessionEndResponseSchema.parse({
+          status: SESSION_END_STATUS.NOOP,
+        });
+        return reply.send(response);
+      }
+
+      finalizeSession(request, session.id, SESSION_END_REASON.CANCELLED);
+
+      const response = SessionEndResponseSchema.parse({
+        status: SESSION_END_STATUS.OK,
+      });
+      return reply.send(response);
     }
   );
 };

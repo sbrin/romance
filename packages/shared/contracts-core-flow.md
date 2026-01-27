@@ -1,4 +1,4 @@
-# Core Flow Contracts (P0-01..P0-05)
+# Core Flow Contracts (P0-01..P0-07)
 
 Эта спецификация описывает минимальные HTTP/WS контракты для Core Flow.
 
@@ -35,6 +35,11 @@
 
 - string, min length 8.
 - Источник: `assets/s1/s1.json` → поле `id`.
+
+### choiceId
+
+- string, min length 8.
+- Это `step_id` следующего шага (ключ в `choices` текущего шага).
 
 ### videoId
 
@@ -203,6 +208,69 @@
 - Если второй участник уже подтвердил, статус будет `STARTED` и сервер
   отправит `session_started` обоим.
 
+### POST /session/step/answer
+
+**Body:** `SessionAnswerRequest`
+
+```ts
+{
+  deviceId: string;
+  sessionId: string;
+  choiceId: string;
+}
+```
+
+**Response:** `SessionAnswerResponse`
+
+```ts
+{
+  status: 'OK' | 'NOOP';
+}
+```
+
+**Errors:**
+
+- `400 INVALID_BODY` — невалидный JSON.
+- `404 SESSION_NOT_FOUND` — сессия не найдена или пользователь не участник.
+- `409 SESSION_NOT_ACTIVE` — сессия не в состоянии `ACTIVE`.
+- `409 INVALID_CHOICE` — `choiceId` не соответствует `currentStep.choices`.
+
+**Notes:**
+
+- Ответ разрешен только `turnDeviceId`. Иначе `NOOP` без ошибок/событий.
+- `choiceId` — это id следующего шага (ключ в `choices` текущего шага).
+- Сервер отправляет `session_step` обоим клиентам для следующего шага.
+
+### POST /session/end
+
+**Body:** `SessionEndRequest`
+
+```ts
+{
+  deviceId: string;
+  sessionId: string;
+}
+```
+
+**Response:** `SessionEndResponse`
+
+```ts
+{
+  status: 'OK' | 'NOOP';
+}
+```
+
+**Errors:**
+
+- `400 INVALID_BODY` — невалидный JSON.
+- `404 SESSION_NOT_FOUND` — сессия не найдена или пользователь не участник.
+
+**Notes:**
+
+- Idempotent: повторный вызов безопасен.
+- Очищает `sessionId`/шаги у обоих участников.
+- Если сессия активна — сервер шлет `session_ended`.
+
 ### POST /session/resume
 
 **Body:** `SessionResumeRequest`
@@ -330,3 +398,20 @@
 - `videoUrl` вычисляется **персонально для каждого клиента**:
   если для роли есть `videoByRole` в шаге — обновить, иначе оставить предыдущее
   видео (сервер повторно отправляет последний `videoUrl`).
+- Если `choices` пустые — это терминальный шаг, после него сервер шлет
+  `session_ended`.
+
+### Event: session_ended
+
+**Payload:** `SessionEndedEvent`
+
+```ts
+{
+  sessionId: string;
+  reason: 'completed' | 'timeout' | 'cancelled';
+}
+```
+
+**Notes:**
+
+- Событие отправляется обоим пользователям при завершении сессии.

@@ -1,4 +1,4 @@
-import type { SessionStepEvent, UserRole } from '@romance/shared'
+import type { SessionEndReason, SessionStepEvent, UserRole } from '@romance/shared'
 
 export type UiState =
   | 'ROLE_SELECT'
@@ -10,6 +10,7 @@ export type UiState =
   | 'ACTIVE_MY_TURN'
   | 'ACTIVE_WAIT'
   | 'PARTNER_CANCELLED'
+  | 'SESSION_ENDED'
 
 export type SessionStepState = {
   stepId: string
@@ -27,6 +28,7 @@ export type AppState = {
   currentStep: SessionStepState | null
   choices: SessionStepEvent['choices']
   turnDeviceId: string | null
+  sessionEndReason: SessionEndReason | null
 }
 
 export type AppAction =
@@ -42,6 +44,8 @@ export type AppAction =
   | { type: 'SESSION_STEP_RECEIVED'; payload: SessionStepEvent }
   | { type: 'SESSION_RESUMED'; payload: SessionStepEvent }
   | { type: 'SESSION_MATCH_RESUMED'; sessionId: string; waitingForStart: boolean }
+  | { type: 'SESSION_ENDED'; sessionId: string; reason: SessionEndReason }
+  | { type: 'RETURN_TO_QUEUE' }
   | { type: 'ROLE_REQUIRED' }
   | { type: 'ERROR'; message: string }
 
@@ -72,6 +76,7 @@ export const createInitialState = (
         },
         choices: resumeSession.step.choices,
         turnDeviceId: resumeSession.step.turnDeviceId,
+        sessionEndReason: null,
       }
     }
 
@@ -84,6 +89,7 @@ export const createInitialState = (
       currentStep: null,
       choices: [],
       turnDeviceId: null,
+      sessionEndReason: null,
     }
   }
 
@@ -96,6 +102,7 @@ export const createInitialState = (
     currentStep: null,
     choices: [],
     turnDeviceId: null,
+    sessionEndReason: null,
   }
 }
 
@@ -132,6 +139,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         currentStep: null,
         choices: [],
         turnDeviceId: null,
+        sessionEndReason: null,
       }
     case 'PARTNER_FOUND':
       if (state.uiState !== 'QUEUE' && state.uiState !== 'START_SEARCH') {
@@ -162,6 +170,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         currentStep: null,
         choices: [],
         turnDeviceId: null,
+        sessionEndReason: null,
       }
     }
     case 'START_PRESSED':
@@ -172,6 +181,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         ...state,
         uiState: 'WAITING_FOR_START',
         error: null,
+        sessionEndReason: null,
       }
     case 'START_FAILED':
       return {
@@ -190,6 +200,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         ...state,
         uiState: 'SESSION_STARTED',
         error: null,
+        sessionEndReason: null,
       }
     case 'SESSION_STEP_RECEIVED':
       if (!state.sessionId || state.sessionId !== action.payload.sessionId) {
@@ -210,6 +221,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         choices: action.payload.choices,
         turnDeviceId: action.payload.turnDeviceId,
         error: null,
+        sessionEndReason: null,
       }
     case 'SESSION_RESUMED':
       return {
@@ -228,6 +240,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         choices: action.payload.choices,
         turnDeviceId: action.payload.turnDeviceId,
         error: null,
+        sessionEndReason: null,
       }
     case 'SESSION_MATCH_RESUMED':
       return {
@@ -235,6 +248,31 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         sessionId: action.sessionId,
         uiState: action.waitingForStart ? 'WAITING_FOR_START' : 'PARTNER_FOUND',
         error: null,
+        sessionEndReason: null,
+      }
+    case 'SESSION_ENDED':
+      if (state.sessionId !== action.sessionId) {
+        return state
+      }
+      return {
+        ...state,
+        uiState: 'SESSION_ENDED',
+        error: null,
+        currentStep: null,
+        choices: [],
+        turnDeviceId: null,
+        sessionEndReason: action.reason,
+      }
+    case 'RETURN_TO_QUEUE':
+      return {
+        ...state,
+        sessionId: null,
+        uiState: state.role ? 'QUEUE' : 'ROLE_SELECT',
+        error: null,
+        currentStep: null,
+        choices: [],
+        turnDeviceId: null,
+        sessionEndReason: null,
       }
     case 'ROLE_REQUIRED':
       return {
@@ -246,6 +284,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         currentStep: null,
         choices: [],
         turnDeviceId: null,
+        sessionEndReason: null,
       }
     case 'ERROR':
       return {

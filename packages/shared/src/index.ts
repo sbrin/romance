@@ -77,6 +77,7 @@ export const SOCKET_EVENT = {
   PARTNER_CANCELLED: 'partner_cancelled',
   SESSION_STARTED: 'session_started',
   SESSION_STEP: 'session_step',
+  SESSION_ENDED: 'session_ended',
 } as const;
 export type SocketEvent = (typeof SOCKET_EVENT)[keyof typeof SOCKET_EVENT];
 
@@ -107,6 +108,19 @@ export const ANALYTICS_EVENTS = [
   ANALYTICS_EVENT.SESSION_END,
 ] as const;
 export type AnalyticsEvent = (typeof ANALYTICS_EVENTS)[number];
+
+export const SESSION_END_REASON = {
+  COMPLETED: 'completed',
+  TIMEOUT: 'timeout',
+  CANCELLED: 'cancelled',
+} as const;
+export const SESSION_END_REASONS = [
+  SESSION_END_REASON.COMPLETED,
+  SESSION_END_REASON.TIMEOUT,
+  SESSION_END_REASON.CANCELLED,
+] as const;
+export const SessionEndReasonSchema = z.enum(SESSION_END_REASONS);
+export type SessionEndReason = z.infer<typeof SessionEndReasonSchema>;
 
 export const DeviceIdSchema = z.string().min(8);
 export type DeviceId = z.infer<typeof DeviceIdSchema>;
@@ -217,6 +231,51 @@ export const SessionStartResponseSchema = z.object({
 });
 export type SessionStartResponse = z.infer<typeof SessionStartResponseSchema>;
 
+export const SESSION_ANSWER_STATUS = {
+  OK: 'OK',
+  NOOP: 'NOOP',
+} as const;
+export const SESSION_ANSWER_STATUSES = [
+  SESSION_ANSWER_STATUS.OK,
+  SESSION_ANSWER_STATUS.NOOP,
+] as const;
+export const SessionAnswerStatusSchema = z.enum(SESSION_ANSWER_STATUSES);
+export type SessionAnswerStatus = z.infer<typeof SessionAnswerStatusSchema>;
+
+export const SessionAnswerRequestSchema = z.object({
+  deviceId: DeviceIdSchema,
+  sessionId: SessionIdSchema,
+  choiceId: StepIdSchema,
+});
+export type SessionAnswerRequest = z.infer<typeof SessionAnswerRequestSchema>;
+
+export const SessionAnswerResponseSchema = z.object({
+  status: SessionAnswerStatusSchema,
+});
+export type SessionAnswerResponse = z.infer<typeof SessionAnswerResponseSchema>;
+
+export const SESSION_END_STATUS = {
+  OK: 'OK',
+  NOOP: 'NOOP',
+} as const;
+export const SESSION_END_STATUSES = [
+  SESSION_END_STATUS.OK,
+  SESSION_END_STATUS.NOOP,
+] as const;
+export const SessionEndStatusSchema = z.enum(SESSION_END_STATUSES);
+export type SessionEndStatus = z.infer<typeof SessionEndStatusSchema>;
+
+export const SessionEndRequestSchema = z.object({
+  deviceId: DeviceIdSchema,
+  sessionId: SessionIdSchema,
+});
+export type SessionEndRequest = z.infer<typeof SessionEndRequestSchema>;
+
+export const SessionEndResponseSchema = z.object({
+  status: SessionEndStatusSchema,
+});
+export type SessionEndResponse = z.infer<typeof SessionEndResponseSchema>;
+
 export const SessionResumeRequestSchema = z.object({
   deviceId: DeviceIdSchema,
 });
@@ -271,6 +330,12 @@ export const SessionStartedEventSchema = z.object({
   sessionId: SessionIdSchema,
 });
 export type SessionStartedEvent = z.infer<typeof SessionStartedEventSchema>;
+
+export const SessionEndedEventSchema = z.object({
+  sessionId: SessionIdSchema,
+  reason: SessionEndReasonSchema,
+});
+export type SessionEndedEvent = z.infer<typeof SessionEndedEventSchema>;
 
 export const SocketAuthSchema = z.object({
   deviceId: DeviceIdSchema,

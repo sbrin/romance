@@ -1,17 +1,22 @@
-# Session Feature (P0-05)
+# Session Feature (P0-05..P0-07)
 
 ## Назначение
 
 - Отображает шаг диалога по событию `session_step` от сервера.
 - Показывает видео на фоне, бабл с текстом и варианты ответа.
 - Показывает кнопки только активному игроку (`turnDeviceId === deviceId`).
+- Отправляет выбор через `POST /session/step/answer` с `choiceId`.
+- Показывает экран завершения по событию `session_ended`.
 
 ## Контракты
 
 - WS событие: `session_step`.
+- WS событие: `session_ended`.
 - Поля: `bubbleText`, `choices`, `videoUrl`, `turnDeviceId`.
 - Восстановление активной сессии использует `POST /session/resume` и получает
   `step` той же структуры, что и `session_step`.
+- Завершение сессии сбрасывает локальное состояние и возвращает в очередь через
+  `POST /session/end` → `POST /queue/join`.
 
 ## Обоснование
 

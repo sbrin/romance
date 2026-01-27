@@ -56,7 +56,9 @@
 - `GET /session` → получить состояние/матч.
 - `POST /session/start` → подтвердить старт.
 - `POST /session/step/answer` → ответ на шаг.
+- `POST /session/end` → завершить/сбросить сессию.
 - Реал-тайм: `session_step` (статус, чей ход, шаг, `video_url`, `bubble_text`).
+- Реал-тайм: `session_ended` (reason: completed/timeout).
 
 ## Критерии готовности (E2E)
 

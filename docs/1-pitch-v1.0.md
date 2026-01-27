@@ -124,7 +124,7 @@
   - видео ассеты в папках,
   - замена видео/текста не требует правок в коде.
 - **Логи событий** (минимум): selected_gender, queued, partner_found, start_pressed,
-  session_started, choice_made, step_advanced, timeout_warn, timeout_end,
+  session_started, choice_made, step_shown, timeout_warn, timeout_end,
   disconnect, session_end.
 
 ---

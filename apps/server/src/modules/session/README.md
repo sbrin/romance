@@ -6,6 +6,9 @@
 - Переводит сессию в состояние `WAITING_FOR_START` или `ACTIVE`.
 - Уведомляет участников событием `session_started`.
 - После старта отправляет первый шаг диалога событием `session_step`.
+- Обрабатывает ответы на шаг через `POST /session/step/answer` и рассылает следующий шаг.
+- Завершает сессию через `POST /session/end` или при терминальном шаге.
+- Отправляет `session_ended` и очищает состояние участников.
 - При восстановлении активной сессии возвращает текущий шаг через `POST /session/resume`.
 - Если сессия в состоянии `PARTNER_FOUND` или `WAITING_FOR_START`, возвращает
   соответствующий статус для восстановления экрана мэтча.
@@ -16,8 +19,11 @@
 
 - `POST /session/start`
 - `POST /session/resume`
+- `POST /session/step/answer`
+- `POST /session/end`
 - WS событие: `session_started`
 - WS событие: `session_step`
+- WS событие: `session_ended`
 
 ## Обоснование
 
