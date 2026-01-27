@@ -138,6 +138,48 @@
   outline-offset: 3px;
 }
 
+.exit-button {
+  position: fixed;
+  right: calc(20px + env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(10, 14, 28, 0.78);
+  color: var(--fog);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  z-index: 3;
+  box-shadow: 0 16px 35px rgba(6, 10, 20, 0.45);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.exit-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(247, 163, 91, 0.6);
+  box-shadow: 0 20px 45px rgba(6, 10, 20, 0.55);
+}
+
+.exit-button:focus-visible {
+  outline: 2px solid rgba(247, 163, 91, 0.7);
+  outline-offset: 3px;
+}
+
+.exit-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
+}
+
 .status-overlay {
   padding: 32px 28px 36px;
   border-radius: 24px;

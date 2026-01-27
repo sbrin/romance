@@ -21,7 +21,7 @@ import {
 import './App.css'
 import { ApiError, API_BASE_URL, postJson } from './api/http'
 import { syncRoleSelection } from './api/roleSync'
-import { appReducer, createInitialState } from './state/appReducer'
+import { appReducer, createInitialState, type UiState } from './state/appReducer'
 import { getOrCreateDeviceId, getStoredRole, persistRole } from './state/storage'
 import RoleSelect from './features/role/RoleSelect'
 import QueueStatus from './features/queue/QueueStatus'
@@ -30,6 +30,15 @@ import PartnerFound from './features/search/PartnerFound'
 import PartnerCancelled from './features/search/PartnerCancelled'
 import SessionStep from './features/session/SessionStep'
 import ScreenFrame from './ui/ScreenFrame'
+
+const EXIT_AVAILABLE_STATES: UiState[] = [
+  'QUEUE',
+  'PARTNER_FOUND',
+  'WAITING_FOR_START',
+  'SESSION_STARTED',
+  'ACTIVE_MY_TURN',
+  'ACTIVE_WAIT',
+]
 
 function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, () => {
@@ -226,11 +235,13 @@ function App() {
   }
 
   const handleCancelSearch = () => {
-    const parsed = QueueCancelRequestSchema.safeParse({ deviceId: state.deviceId })
-    if (parsed.success) {
-      void postJson('/queue/cancel', parsed.data, QueueCancelResponseSchema).catch(() => {
-        dispatch({ type: 'ERROR', message: 'Не удалось отменить поиск.' })
-      })
+    if (EXIT_AVAILABLE_STATES.includes(state.uiState)) {
+      const parsed = QueueCancelRequestSchema.safeParse({ deviceId: state.deviceId })
+      if (parsed.success) {
+        void postJson('/queue/cancel', parsed.data, QueueCancelResponseSchema).catch(() => {
+          dispatch({ type: 'ERROR', message: 'Не удалось отменить поиск.' })
+        })
+      }
     }
     dispatch({ type: 'RETURN_TO_START' })
   }
@@ -269,18 +280,23 @@ function App() {
   const videoSrc = state.currentStep?.videoUrl
     ? `${baseUrl}/videos/${state.currentStep.videoUrl}`
     : undefined
+  const hasVideo = Boolean(videoSrc)
+  const showExitButton = EXIT_AVAILABLE_STATES.includes(state.uiState)
 
   return (
     <div className="app">
       <div className="video-stage" aria-hidden="true">
-        <video
-          className="video-stage__video"
-          autoPlay
-          muted
-          loop
-          playsInline
-          src={videoSrc}
-        />
+        {hasVideo && (
+          <video
+            key={videoSrc}
+            className="video-stage__video"
+            autoPlay
+            muted
+            loop
+            playsInline
+            src={videoSrc}
+          />
+        )}
         <div className="video-stage__scrim" />
         <div className="video-stage__grain" />
       </div>
@@ -291,27 +307,15 @@ function App() {
             <RoleSelect isSubmitting={isSubmittingRole} onSelect={handleSelectRole} />
           )}
           {state.uiState === 'START_SEARCH' && <StartSearch onStart={handleStartSearch} />}
-          {state.uiState === 'QUEUE' && <QueueStatus onCancel={handleCancelSearch} />}
+          {state.uiState === 'QUEUE' && <QueueStatus />}
           {state.uiState === 'PARTNER_FOUND' && (
-            <PartnerFound
-              status="idle"
-              onCancel={handleCancelSearch}
-              onStart={handleStartSession}
-            />
+            <PartnerFound status="idle" onStart={handleStartSession} />
           )}
           {state.uiState === 'WAITING_FOR_START' && (
-            <PartnerFound
-              status="waiting"
-              onCancel={handleCancelSearch}
-              onStart={handleStartSession}
-            />
+            <PartnerFound status="waiting" onStart={handleStartSession} />
           )}
           {state.uiState === 'SESSION_STARTED' && (
-            <PartnerFound
-              status="started"
-              onCancel={handleCancelSearch}
-              onStart={handleStartSession}
-            />
+            <PartnerFound status="started" onStart={handleStartSession} />
           )}
           {state.uiState === 'ACTIVE_MY_TURN' && state.currentStep && (
             <SessionStep
@@ -338,6 +342,12 @@ function App() {
           </div>
         )}
       </ScreenFrame>
+
+      {showExitButton && (
+        <button className="exit-button" type="button" onClick={handleCancelSearch}>
+          Выйти
+        </button>
+      )}
     </div>
   )
 }

@@ -4,7 +4,6 @@ import StatusOverlay from '../../ui/StatusOverlay'
 type PartnerFoundStatus = 'idle' | 'waiting' | 'started'
 
 type PartnerFoundProps = {
-  onCancel: () => void
   onStart: () => void
   status: PartnerFoundStatus
 }
@@ -15,7 +14,7 @@ const subtitles: Record<PartnerFoundStatus, string> = {
   started: 'Сессия начинается.',
 }
 
-const PartnerFound = ({ onCancel, onStart, status }: PartnerFoundProps) => {
+const PartnerFound = ({ onStart, status }: PartnerFoundProps) => {
   const isWaiting = status === 'waiting'
   const isStarted = status === 'started'
 
@@ -27,15 +26,10 @@ const PartnerFound = ({ onCancel, onStart, status }: PartnerFoundProps) => {
       subtitle={subtitles[status]}
     >
       {!isStarted && (
-        <>
-          <PrimaryActionButton onClick={onStart} disabled={isWaiting}>
-            {isWaiting ? 'Жду партнера' : 'Начать'}
-          </PrimaryActionButton>
-        </>
+        <PrimaryActionButton onClick={onStart} disabled={isWaiting}>
+          {isWaiting ? 'Жду партнера' : 'Начать'}
+        </PrimaryActionButton>
       )}
-      <PrimaryActionButton variant="ghost" onClick={onCancel}>
-        Отмена
-      </PrimaryActionButton>
     </StatusOverlay>
   )
 }
