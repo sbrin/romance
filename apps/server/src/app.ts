@@ -54,6 +54,7 @@ registerSearchingRoutes(fastify, {
   sessionService,
 });
 registerSessionRoutes(fastify, {
+  store,
   socketHub,
   sessionService,
   dialogService,

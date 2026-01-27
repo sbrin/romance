@@ -54,8 +54,8 @@
         "157B37D2777F4F89A5775A402A27EC86": "Не знаю"
       },
       "videoByRole": {
-        "male": "m1",
-        "female": "f1"
+        "male": "f1",
+        "female": "m1"
       }
     },
     {
@@ -159,6 +159,10 @@
         },
         "selected": false,
         "dragging": false
+      },
+      "videoByRole": {
+        "male": "f3",
+        "female": "m3"
       }
     },
     {
@@ -206,6 +210,10 @@
         },
         "selected": false,
         "dragging": false
+      },
+      "videoByRole": {
+        "male": "f2",
+        "female": "m2"
       }
     },
     {

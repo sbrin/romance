@@ -1,8 +1,16 @@
-import { DeviceIdSchema, UserRoleSchema, type UserRole } from '@romance/shared'
+import { z } from 'zod'
+import {
+  DeviceIdSchema,
+  SessionIdSchema,
+  SessionStepEventSchema,
+  UserRoleSchema,
+  type UserRole,
+} from '@romance/shared'
 
 const STORAGE_KEYS = {
   DEVICE_ID: 'romance.deviceId',
   ROLE: 'romance.role',
+  SESSION: 'romance.session',
 } as const
 
 const safeGet = (key: string) => {
@@ -72,4 +80,60 @@ export const persistRole = (role: UserRole) => {
 
 export const clearRole = () => {
   safeRemove(STORAGE_KEYS.ROLE)
+}
+
+const StoredSessionSchema = z
+  .object({
+    sessionId: SessionIdSchema,
+    step: SessionStepEventSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.step && value.step.sessionId !== value.sessionId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Session step does not match stored session id',
+      })
+    }
+  })
+
+export type StoredSession = z.infer<typeof StoredSessionSchema>
+
+export const getStoredSession = (): StoredSession | null => {
+  const stored = safeGet(STORAGE_KEYS.SESSION)
+  if (!stored) {
+    return null
+  }
+
+  const parsedJson = (() => {
+    try {
+      return JSON.parse(stored) as unknown
+    } catch {
+      return null
+    }
+  })()
+
+  if (!parsedJson) {
+    safeRemove(STORAGE_KEYS.SESSION)
+    return null
+  }
+
+  const parsed = StoredSessionSchema.safeParse(parsedJson)
+  if (!parsed.success) {
+    safeRemove(STORAGE_KEYS.SESSION)
+    return null
+  }
+
+  return parsed.data
+}
+
+export const persistSession = (session: StoredSession) => {
+  const parsed = StoredSessionSchema.safeParse(session)
+  if (!parsed.success) {
+    return
+  }
+  safeSet(STORAGE_KEYS.SESSION, JSON.stringify(parsed.data))
+}
+
+export const clearStoredSession = () => {
+  safeRemove(STORAGE_KEYS.SESSION)
 }

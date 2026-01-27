@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import Fastify, { type FastifyInstance } from 'fastify';
 import {
   SessionStepEventSchema,
+  SESSION_RESUME_STATUS,
   SESSION_START_STATUS,
   USER_ROLE,
   QUEUE_JOIN_STATUS,
@@ -67,7 +68,7 @@ const buildApp = () => {
   };
 
   registerSearchingRoutes(fastify, { store, socketHub, sessionService });
-  registerSessionRoutes(fastify, { socketHub, sessionService, dialogService });
+  registerSessionRoutes(fastify, { store, socketHub, sessionService, dialogService });
   return { fastify, started, steps };
 };
 
@@ -166,5 +167,114 @@ test('POST /session/start emits session_started when both confirm', async () => 
   assert.ok(started.find((item) => item.deviceId === 'device-f'));
   assert.ok(steps.find((item) => item.deviceId === 'device-m'));
   assert.ok(steps.find((item) => item.deviceId === 'device-f'));
+  await fastify.close();
+});
+
+test('POST /session/resume returns none when no active session', async () => {
+  const { fastify } = buildApp();
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/resume',
+    payload: { deviceId: 'device-m' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, SESSION_RESUME_STATUS.NONE);
+  await fastify.close();
+});
+
+test('POST /session/resume returns queued when user is waiting for partner', async () => {
+  const { fastify } = buildApp();
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/role',
+    payload: { deviceId: 'device-m', role: USER_ROLE.MALE },
+  });
+
+  const queued = await fastify.inject({
+    method: 'POST',
+    url: '/queue/join',
+    payload: { deviceId: 'device-m' },
+  });
+  assert.equal(queued.json().status, QUEUE_JOIN_STATUS.QUEUED);
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/resume',
+    payload: { deviceId: 'device-m' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.json().status, SESSION_RESUME_STATUS.QUEUED);
+  await fastify.close();
+});
+
+test('POST /session/resume returns active step for active session', async () => {
+  const { fastify } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-f', sessionId },
+  });
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/resume',
+    payload: { deviceId: 'device-m' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.equal(body.status, SESSION_RESUME_STATUS.ACTIVE);
+  assert.equal(body.sessionId, sessionId);
+  assert.ok(SessionStepEventSchema.safeParse(body.step).success);
+  await fastify.close();
+});
+
+test('POST /session/resume returns found when partner found and not started', async () => {
+  const { fastify } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/resume',
+    payload: { deviceId: 'device-m' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.equal(body.status, SESSION_RESUME_STATUS.FOUND);
+  assert.equal(body.sessionId, sessionId);
+  await fastify.close();
+});
+
+test('POST /session/resume returns waiting for user that already started', async () => {
+  const { fastify } = buildApp();
+  const sessionId = await createMatch(fastify);
+
+  await fastify.inject({
+    method: 'POST',
+    url: '/session/start',
+    payload: { deviceId: 'device-m', sessionId },
+  });
+
+  const response = await fastify.inject({
+    method: 'POST',
+    url: '/session/resume',
+    payload: { deviceId: 'device-m' },
+  });
+
+  assert.equal(response.statusCode, 200);
+  const body = response.json();
+  assert.equal(body.status, SESSION_RESUME_STATUS.WAITING);
+  assert.equal(body.sessionId, sessionId);
   await fastify.close();
 });

@@ -40,13 +40,53 @@ export type AppAction =
   | { type: 'START_FAILED'; message: string }
   | { type: 'SESSION_STARTED'; sessionId: string }
   | { type: 'SESSION_STEP_RECEIVED'; payload: SessionStepEvent }
+  | { type: 'SESSION_RESUMED'; payload: SessionStepEvent }
+  | { type: 'SESSION_MATCH_RESUMED'; sessionId: string; waitingForStart: boolean }
   | { type: 'ROLE_REQUIRED' }
   | { type: 'ERROR'; message: string }
 
+export type ResumeSession = {
+  sessionId: string
+  step?: SessionStepEvent
+}
+
 export const createInitialState = (
   deviceId: string,
-  role: UserRole | null
+  role: UserRole | null,
+  resumeSession?: ResumeSession | null
 ): AppState => {
+  if (resumeSession?.sessionId) {
+    if (resumeSession.step) {
+      const isMyTurn = resumeSession.step.turnDeviceId === deviceId
+      return {
+        deviceId,
+        role,
+        sessionId: resumeSession.sessionId,
+        uiState: isMyTurn ? 'ACTIVE_MY_TURN' : 'ACTIVE_WAIT',
+        error: null,
+        currentStep: {
+          stepId: resumeSession.step.stepId,
+          actor: resumeSession.step.actor,
+          bubbleText: resumeSession.step.bubbleText,
+          videoUrl: resumeSession.step.videoUrl,
+        },
+        choices: resumeSession.step.choices,
+        turnDeviceId: resumeSession.step.turnDeviceId,
+      }
+    }
+
+    return {
+      deviceId,
+      role,
+      sessionId: resumeSession.sessionId,
+      uiState: 'SESSION_STARTED',
+      error: null,
+      currentStep: null,
+      choices: [],
+      turnDeviceId: null,
+    }
+  }
+
   return {
     deviceId,
     role,
@@ -94,7 +134,7 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         turnDeviceId: null,
       }
     case 'PARTNER_FOUND':
-      if (!state.role || (state.uiState !== 'QUEUE' && state.uiState !== 'START_SEARCH')) {
+      if (state.uiState !== 'QUEUE' && state.uiState !== 'START_SEARCH') {
         return state
       }
       return {
@@ -169,6 +209,31 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         },
         choices: action.payload.choices,
         turnDeviceId: action.payload.turnDeviceId,
+        error: null,
+      }
+    case 'SESSION_RESUMED':
+      return {
+        ...state,
+        sessionId: action.payload.sessionId,
+        uiState:
+          action.payload.turnDeviceId === state.deviceId
+            ? 'ACTIVE_MY_TURN'
+            : 'ACTIVE_WAIT',
+        currentStep: {
+          stepId: action.payload.stepId,
+          actor: action.payload.actor,
+          bubbleText: action.payload.bubbleText,
+          videoUrl: action.payload.videoUrl,
+        },
+        choices: action.payload.choices,
+        turnDeviceId: action.payload.turnDeviceId,
+        error: null,
+      }
+    case 'SESSION_MATCH_RESUMED':
+      return {
+        ...state,
+        sessionId: action.sessionId,
+        uiState: action.waitingForStart ? 'WAITING_FOR_START' : 'PARTNER_FOUND',
         error: null,
       }
     case 'ROLE_REQUIRED':

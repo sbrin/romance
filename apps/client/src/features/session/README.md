@@ -10,6 +10,8 @@
 
 - WS событие: `session_step`.
 - Поля: `bubbleText`, `choices`, `videoUrl`, `turnDeviceId`.
+- Восстановление активной сессии использует `POST /session/resume` и получает
+  `step` той же структуры, что и `session_step`.
 
 ## Обоснование
 

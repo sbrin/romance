@@ -8,6 +8,9 @@ import {
   QueueJoinRequestSchema,
   QueueJoinResponseSchema,
   QUEUE_JOIN_STATUS,
+  SessionResumeRequestSchema,
+  SessionResumeResponseSchema,
+  SESSION_RESUME_STATUS,
   SessionStepEventSchema,
   SessionStartRequestSchema,
   SessionStartResponseSchema,
@@ -19,10 +22,17 @@ import {
   type UserRole,
 } from '@romance/shared'
 import './App.css'
-import { ApiError, API_BASE_URL, postJson } from './api/http'
+import { ApiError, API_BASE_URL, postJson, sendBeaconJson } from './api/http'
 import { syncRoleSelection } from './api/roleSync'
 import { appReducer, createInitialState, type UiState } from './state/appReducer'
-import { getOrCreateDeviceId, getStoredRole, persistRole } from './state/storage'
+import {
+  clearStoredSession,
+  getOrCreateDeviceId,
+  getStoredRole,
+  getStoredSession,
+  persistRole,
+  persistSession,
+} from './state/storage'
 import RoleSelect from './features/role/RoleSelect'
 import QueueStatus from './features/queue/QueueStatus'
 import StartSearch from './features/search/StartSearch'
@@ -40,14 +50,33 @@ const EXIT_AVAILABLE_STATES: UiState[] = [
   'ACTIVE_WAIT',
 ]
 
+const CANCEL_ON_EXIT_STATES: UiState[] = [
+  'QUEUE',
+  'PARTNER_FOUND',
+  'WAITING_FOR_START',
+]
+
+const RESUME_SESSION_STATES: UiState[] = [
+  'SESSION_STARTED',
+  'ACTIVE_MY_TURN',
+  'ACTIVE_WAIT',
+]
+
 function App() {
   const [state, dispatch] = useReducer(appReducer, undefined, () => {
     const deviceId = getOrCreateDeviceId()
     const role = getStoredRole()
-    return createInitialState(deviceId, role)
+    const resumeSession = getStoredSession()
+    return createInitialState(deviceId, role, resumeSession)
   })
   const [isSubmittingRole, setIsSubmittingRole] = useState(false)
   const roleSyncedRef = useRef(false)
+  const latestStateRef = useRef(state)
+  const queuedResumeRef = useRef(false)
+
+  useEffect(() => {
+    latestStateRef.current = state
+  }, [state])
 
   useEffect(() => {
     if (!state.role) {
@@ -106,7 +135,113 @@ function App() {
   }, [state.deviceId])
 
   useEffect(() => {
-    if (state.uiState !== 'QUEUE' || !state.role) {
+    let cancelled = false
+
+    const resumeSession = async () => {
+      try {
+        const request = SessionResumeRequestSchema.parse({ deviceId: state.deviceId })
+        const response = await postJson(
+          '/session/resume',
+          request,
+          SessionResumeResponseSchema
+        )
+        if (cancelled) {
+          return
+        }
+
+        if (response.status === SESSION_RESUME_STATUS.ACTIVE && response.step) {
+          dispatch({ type: 'SESSION_RESUMED', payload: response.step })
+          return
+        }
+
+        if (
+          (response.status === SESSION_RESUME_STATUS.FOUND ||
+            response.status === SESSION_RESUME_STATUS.WAITING) &&
+          response.sessionId
+        ) {
+          dispatch({
+            type: 'SESSION_MATCH_RESUMED',
+            sessionId: response.sessionId,
+            waitingForStart: response.status === SESSION_RESUME_STATUS.WAITING,
+          })
+          return
+        }
+
+        if (response.status === SESSION_RESUME_STATUS.QUEUED) {
+          queuedResumeRef.current = true
+          dispatch({ type: 'QUEUE_JOINED' })
+          return
+        }
+
+        if (response.status === SESSION_RESUME_STATUS.NONE) {
+          clearStoredSession()
+          const current = latestStateRef.current
+          if (RESUME_SESSION_STATES.includes(current.uiState)) {
+            dispatch({
+              type: 'RETURN_TO_START',
+              error: 'Сессия завершена.',
+            })
+          }
+        }
+      } catch {
+        if (cancelled) {
+          return
+        }
+        const current = latestStateRef.current
+        if (RESUME_SESSION_STATES.includes(current.uiState)) {
+          dispatch({ type: 'ERROR', message: 'Не удалось восстановить сессию.' })
+        }
+      }
+    }
+
+    void resumeSession()
+
+    return () => {
+      cancelled = true
+    }
+  }, [state.deviceId])
+
+  useEffect(() => {
+    const handleExit = () => {
+      const current = latestStateRef.current
+      if (!CANCEL_ON_EXIT_STATES.includes(current.uiState)) {
+        return
+      }
+      const parsed = QueueCancelRequestSchema.safeParse({ deviceId: current.deviceId })
+      if (!parsed.success) {
+        return
+      }
+      clearStoredSession()
+      sendBeaconJson('/queue/cancel', parsed.data)
+    }
+
+    const handlePageHide = () => {
+      handleExit()
+    }
+
+    const handleBeforeUnload = () => {
+      handleExit()
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (state.uiState !== 'QUEUE') {
+      return
+    }
+
+    if (queuedResumeRef.current) {
+      queuedResumeRef.current = false
+      return
+    }
+
+    if (!state.role) {
       return
     }
 
@@ -216,6 +351,42 @@ function App() {
       cancelled = true
     }
   }, [state.deviceId, state.role, state.uiState])
+
+  useEffect(() => {
+    if (!state.sessionId || !RESUME_SESSION_STATES.includes(state.uiState)) {
+      clearStoredSession()
+      return
+    }
+
+    if (state.uiState === 'SESSION_STARTED') {
+      persistSession({ sessionId: state.sessionId })
+      return
+    }
+
+    if (!state.currentStep || !state.turnDeviceId) {
+      persistSession({ sessionId: state.sessionId })
+      return
+    }
+
+    persistSession({
+      sessionId: state.sessionId,
+      step: {
+        sessionId: state.sessionId,
+        stepId: state.currentStep.stepId,
+        actor: state.currentStep.actor,
+        bubbleText: state.currentStep.bubbleText,
+        choices: state.choices,
+        videoUrl: state.currentStep.videoUrl,
+        turnDeviceId: state.turnDeviceId,
+      },
+    })
+  }, [
+    state.sessionId,
+    state.uiState,
+    state.currentStep,
+    state.choices,
+    state.turnDeviceId,
+  ])
 
   const handleSelectRole = async (role: UserRole) => {
     setIsSubmittingRole(true)

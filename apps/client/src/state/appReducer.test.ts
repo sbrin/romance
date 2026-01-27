@@ -23,6 +23,18 @@ test('partner_found sets session and state', () => {
   assert.equal(next.sessionId, 'session-abcdef12')
 })
 
+test('partner_found works after queue resume even without role', () => {
+  const initial = createInitialState('device-12345678', null)
+  const queued = appReducer(initial, { type: 'QUEUE_JOINED' })
+  const next = appReducer(queued, {
+    type: 'PARTNER_FOUND',
+    sessionId: 'session-abcdef12',
+  })
+
+  assert.equal(next.uiState, 'PARTNER_FOUND')
+  assert.equal(next.sessionId, 'session-abcdef12')
+})
+
 test('partner_cancelled clears session but keeps role', () => {
   const initial = createInitialState('device-12345678', USER_ROLE.MALE)
   const matched = appReducer(initial, {
@@ -133,6 +145,50 @@ test('session_step_received sets waiting state for other device', () => {
   assert.equal(next.turnDeviceId, 'device-other')
 })
 
+test('session_resumed sets active state without prior session', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE)
+  const next = appReducer(initial, {
+    type: 'SESSION_RESUMED',
+    payload: {
+      sessionId: 'session-abcdef12',
+      stepId: 'step-12345678',
+      actor: { name: 'She' },
+      bubbleText: 'Привет',
+      choices: [{ id: 'step-abcdef12', text: 'Да' }],
+      videoUrl: 'f1.mp4',
+      turnDeviceId: 'device-other',
+    },
+  })
+
+  assert.equal(next.uiState, 'ACTIVE_WAIT')
+  assert.equal(next.sessionId, 'session-abcdef12')
+  assert.equal(next.currentStep?.stepId, 'step-12345678')
+})
+
+test('session_match_resumed restores partner found state', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE)
+  const next = appReducer(initial, {
+    type: 'SESSION_MATCH_RESUMED',
+    sessionId: 'session-abcdef12',
+    waitingForStart: false,
+  })
+
+  assert.equal(next.uiState, 'PARTNER_FOUND')
+  assert.equal(next.sessionId, 'session-abcdef12')
+})
+
+test('session_match_resumed restores waiting state', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE)
+  const next = appReducer(initial, {
+    type: 'SESSION_MATCH_RESUMED',
+    sessionId: 'session-abcdef12',
+    waitingForStart: true,
+  })
+
+  assert.equal(next.uiState, 'WAITING_FOR_START')
+  assert.equal(next.sessionId, 'session-abcdef12')
+})
+
 test('start_failed returns to partner_found and sets error', () => {
   const initial = createInitialState('device-12345678', USER_ROLE.FEMALE)
   const matched = appReducer(initial, {
@@ -161,4 +217,51 @@ test('return_to_start clears session but keeps role', () => {
   assert.equal(next.uiState, 'START_SEARCH')
   assert.equal(next.sessionId, null)
   assert.equal(next.role, USER_ROLE.FEMALE)
+})
+
+test('createInitialState restores active session for current device', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE, {
+    sessionId: 'session-abcdef12',
+    step: {
+      sessionId: 'session-abcdef12',
+      stepId: 'step-12345678',
+      actor: { name: 'He' },
+      bubbleText: 'Привет',
+      choices: [{ id: 'step-abcdef12', text: 'Да' }],
+      videoUrl: 'm1.mp4',
+      turnDeviceId: 'device-12345678',
+    },
+  })
+
+  assert.equal(initial.uiState, 'ACTIVE_MY_TURN')
+  assert.equal(initial.sessionId, 'session-abcdef12')
+  assert.equal(initial.currentStep?.stepId, 'step-12345678')
+})
+
+test('createInitialState restores wait state for other device', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE, {
+    sessionId: 'session-abcdef12',
+    step: {
+      sessionId: 'session-abcdef12',
+      stepId: 'step-12345678',
+      actor: { name: 'She' },
+      bubbleText: 'Привет',
+      choices: [{ id: 'step-abcdef12', text: 'Да' }],
+      videoUrl: 'f1.mp4',
+      turnDeviceId: 'device-other',
+    },
+  })
+
+  assert.equal(initial.uiState, 'ACTIVE_WAIT')
+  assert.equal(initial.turnDeviceId, 'device-other')
+})
+
+test('createInitialState restores session_started when step missing', () => {
+  const initial = createInitialState('device-12345678', USER_ROLE.MALE, {
+    sessionId: 'session-abcdef12',
+  })
+
+  assert.equal(initial.uiState, 'SESSION_STARTED')
+  assert.equal(initial.sessionId, 'session-abcdef12')
+  assert.equal(initial.currentStep, null)
 })

@@ -117,6 +117,9 @@ export const registerSearchingRoutes = (
       }
 
       const { deviceId } = parsed.data;
+      const user = ensureUser(deps.store, deviceId);
+      const previousSessionId = user.sessionId ?? null;
+      const previousStatus = user.status ?? null;
       const result = cancelSearch(deps.store, deviceId);
 
       if (result.partnerId && result.sessionId) {
@@ -124,6 +127,12 @@ export const registerSearchingRoutes = (
           sessionId: result.sessionId,
         });
       }
+
+      logEvent(request, ANALYTICS_EVENT.DISCONNECT, {
+        deviceId,
+        sessionId: result.sessionId ?? previousSessionId,
+        status: previousStatus,
+      });
 
       const response = QueueCancelResponseSchema.parse({
         status: QUEUE_CANCEL_STATUS.OK,

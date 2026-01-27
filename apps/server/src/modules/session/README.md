@@ -6,10 +6,16 @@
 - Переводит сессию в состояние `WAITING_FOR_START` или `ACTIVE`.
 - Уведомляет участников событием `session_started`.
 - После старта отправляет первый шаг диалога событием `session_step`.
+- При восстановлении активной сессии возвращает текущий шаг через `POST /session/resume`.
+- Если сессия в состоянии `PARTNER_FOUND` или `WAITING_FOR_START`, возвращает
+  соответствующий статус для восстановления экрана мэтча.
+- Если пользователь находится в очереди (`WAITING_FOR_PARTNER`), `POST /session/resume`
+  возвращает статус `QUEUED`, чтобы восстановить экран поиска.
 
 ## Контракты
 
 - `POST /session/start`
+- `POST /session/resume`
 - WS событие: `session_started`
 - WS событие: `session_step`
 

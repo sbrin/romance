@@ -33,6 +33,41 @@ const buildUrl = (url: string) => {
   return `${base}${path}`
 }
 
+export const sendBeaconJson = (url: string, body: unknown) => {
+  const targetUrl = buildUrl(url)
+  const payload = JSON.stringify(body)
+
+  if (typeof navigator === 'undefined') {
+    return false
+  }
+
+  try {
+    if (navigator.sendBeacon) {
+      const blob = new Blob([payload], { type: 'application/json' })
+      const sent = navigator.sendBeacon(targetUrl, blob)
+      if (sent) {
+        return true
+      }
+    }
+  } catch {
+    return false
+  }
+
+  try {
+    void fetch(targetUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: payload,
+      keepalive: true,
+    })
+    return false
+  } catch {
+    return false
+  }
+}
+
 const parseErrorCode = (payload: unknown, fallback: string) => {
   if (typeof payload === 'object' && payload !== null && 'error' in payload) {
     const errorValue = (payload as ErrorPayload).error

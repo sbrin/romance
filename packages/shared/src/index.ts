@@ -55,6 +55,23 @@ export const SESSION_START_STATUSES = [
 export const SessionStartStatusSchema = z.enum(SESSION_START_STATUSES);
 export type SessionStartStatus = z.infer<typeof SessionStartStatusSchema>;
 
+export const SESSION_RESUME_STATUS = {
+  ACTIVE: 'ACTIVE',
+  FOUND: 'FOUND',
+  WAITING: 'WAITING',
+  QUEUED: 'QUEUED',
+  NONE: 'NONE',
+} as const;
+export const SESSION_RESUME_STATUSES = [
+  SESSION_RESUME_STATUS.ACTIVE,
+  SESSION_RESUME_STATUS.FOUND,
+  SESSION_RESUME_STATUS.WAITING,
+  SESSION_RESUME_STATUS.QUEUED,
+  SESSION_RESUME_STATUS.NONE,
+] as const;
+export const SessionResumeStatusSchema = z.enum(SESSION_RESUME_STATUSES);
+export type SessionResumeStatus = z.infer<typeof SessionResumeStatusSchema>;
+
 export const SOCKET_EVENT = {
   PARTNER_FOUND: 'partner_found',
   PARTNER_CANCELLED: 'partner_cancelled',
@@ -199,6 +216,46 @@ export const SessionStartResponseSchema = z.object({
   status: SessionStartStatusSchema,
 });
 export type SessionStartResponse = z.infer<typeof SessionStartResponseSchema>;
+
+export const SessionResumeRequestSchema = z.object({
+  deviceId: DeviceIdSchema,
+});
+export type SessionResumeRequest = z.infer<typeof SessionResumeRequestSchema>;
+
+export const SessionResumeResponseSchema = z
+  .object({
+    status: SessionResumeStatusSchema,
+    sessionId: SessionIdSchema.optional(),
+    step: SessionStepEventSchema.optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.status === SESSION_RESUME_STATUS.ACTIVE) {
+      if (!value.sessionId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sessionId is required for active resume',
+        });
+      }
+      if (!value.step) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'step is required for active resume',
+        });
+      }
+    }
+    if (
+      value.status === SESSION_RESUME_STATUS.FOUND ||
+      value.status === SESSION_RESUME_STATUS.WAITING
+    ) {
+      if (!value.sessionId) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sessionId is required for matched resume',
+        });
+      }
+    }
+  });
+export type SessionResumeResponse = z.infer<typeof SessionResumeResponseSchema>;
 
 export const PartnerFoundEventSchema = z.object({
   sessionId: SessionIdSchema,
