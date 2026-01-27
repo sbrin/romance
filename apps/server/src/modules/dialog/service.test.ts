@@ -8,6 +8,16 @@ import { createDialogService } from './service'
 
 const createTempDir = () => mkdtempSync(path.join(tmpdir(), 'romance-dialog-'))
 
+const createLoggerSpy = () => {
+  const calls: Array<{ payload: Record<string, unknown>; message?: string }> = []
+  const logger = {
+    error: (payload: Record<string, unknown>, message?: string) => {
+      calls.push({ payload, message })
+    },
+  }
+  return { logger, calls }
+}
+
 const writeScenario = (dir: string, scenario: unknown) => {
   const filePath = path.join(dir, 'scenario.json')
   writeFileSync(filePath, JSON.stringify(scenario, null, 2))
@@ -48,6 +58,7 @@ test('dialog loader validates scenario and builds session_step payloads', () => 
   const dialogService = createDialogService({
     scenarioPath,
     videoDirectory: videoDir,
+    logger: { error: () => {} },
   })
 
   assert.equal(dialogService.rootStepId, 'step-12345678')
@@ -83,10 +94,21 @@ test('dialog loader rejects invalid scenario', () => {
   }
 
   const scenarioPath = writeScenario(baseDir, scenario)
+  const { logger, calls } = createLoggerSpy()
 
   assert.throws(() =>
-    createDialogService({ scenarioPath, videoDirectory: videoDir })
+    createDialogService({ scenarioPath, videoDirectory: videoDir, logger })
   )
+
+  const [firstCall] = calls
+  assert.ok(firstCall)
+  const payload = firstCall.payload as { event?: unknown; issues?: unknown }
+  assert.equal(payload.event, 'SCENARIO_INVALID')
+  assert.ok(Array.isArray(payload.issues))
+  const [issue] = payload.issues as Array<{ path?: unknown }>
+  assert.ok(issue)
+  assert.equal(typeof issue.path, 'string')
+  assert.ok(issue.path.includes('scenario'))
 })
 
 test('dialog loader fails when video file is missing', () => {
@@ -110,6 +132,29 @@ test('dialog loader fails when video file is missing', () => {
   const scenarioPath = writeScenario(baseDir, scenario)
 
   assert.throws(() =>
-    createDialogService({ scenarioPath, videoDirectory: videoDir })
+    createDialogService({
+      scenarioPath,
+      videoDirectory: videoDir,
+      logger: { error: () => {} },
+    })
   )
+})
+
+test('dialog loader logs invalid json details', () => {
+  const baseDir = createTempDir()
+  const videoDir = path.join(baseDir, 'videos')
+  mkdirSync(videoDir)
+  const scenarioPath = path.join(baseDir, 'scenario.json')
+  writeFileSync(scenarioPath, '{"scenario": [')
+  const { logger, calls } = createLoggerSpy()
+
+  assert.throws(() =>
+    createDialogService({ scenarioPath, videoDirectory: videoDir, logger })
+  )
+
+  const [firstCall] = calls
+  assert.ok(firstCall)
+  const payload = firstCall.payload as { event?: unknown; errorMessage?: unknown }
+  assert.equal(payload.event, 'SCENARIO_INVALID_JSON')
+  assert.equal(typeof payload.errorMessage, 'string')
 })

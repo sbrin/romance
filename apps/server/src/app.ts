@@ -24,7 +24,7 @@ const io = new Server(fastify.server, {
 const store = createStore();
 const socketHub = createSocketHub(io, store);
 const sessionService = createSessionService(store);
-const dialogService = createDialogService();
+const dialogService = createDialogService({ logger: fastify.log });
 
 const resolveAssetsRoot = () => {
   const candidates = [

@@ -8,6 +8,7 @@
         "name": "He",
         "avatarPath": "images/1769508464279_Screenshot 2026-01-27 at 14.06.42.png"
       },
+      "text": "",
       "next": [
         "77B0EBAFFA5F42ACBAC516F4280AD59F",
         "A7665CBBEDF54F1B95AF9E49B8E9C570",
@@ -64,7 +65,6 @@
         "2938770C7F79489C88D397D7ED442974"
       ],
       "videoByRole": {
-        "male": "f3",
         "female": "m3"
       }
     },
@@ -82,8 +82,7 @@
         "2938770C7F79489C88D397D7ED442974"
       ],
       "videoByRole": {
-        "male": "f2",
-        "female": "m2"
+        "female": "m3"
       }
     },
     {
@@ -101,6 +100,10 @@
       ],
       "videoByRole": {
         "male": "f2"
+      },
+      "choices": {
+        "850D66B048AC49F3B310BE7190ACFA35": "Нет",
+        "099417C91D4349DCAF40BC5380CF0674": "Не знаю"
       }
     },
     {
@@ -115,7 +118,10 @@
       "next": "end",
       "prev": [
         "77B0EBAFFA5F42ACBAC516F4280AD59F"
-      ]
+      ],
+      "videoByRole": {
+        "male": "f3"
+      }
     },
     {
       "type": "Text",
@@ -129,7 +135,10 @@
       "next": "end",
       "prev": [
         "77B0EBAFFA5F42ACBAC516F4280AD59F"
-      ]
+      ],
+      "videoByRole": {
+        "male": "f3"
+      }
     }
   ]
 }

@@ -229,7 +229,19 @@ test('session_ended sets end state and reason', () => {
     type: 'SESSION_STARTED',
     sessionId: 'session-abcdef12',
   })
-  const next = appReducer(started, {
+  const stepped = appReducer(started, {
+    type: 'SESSION_STEP_RECEIVED',
+    payload: {
+      sessionId: 'session-abcdef12',
+      stepId: 'step-12345678',
+      actor: { name: 'She' },
+      bubbleText: 'Финал',
+      choices: [],
+      videoUrl: 'final.mp4',
+      turnDeviceId: 'device-12345678',
+    },
+  })
+  const next = appReducer(stepped, {
     type: 'SESSION_ENDED',
     sessionId: 'session-abcdef12',
     reason: SESSION_END_REASON.COMPLETED,
@@ -238,6 +250,7 @@ test('session_ended sets end state and reason', () => {
   assert.equal(next.uiState, 'SESSION_ENDED')
   assert.equal(next.sessionId, 'session-abcdef12')
   assert.equal(next.sessionEndReason, SESSION_END_REASON.COMPLETED)
+  assert.equal(next.currentStep?.videoUrl, 'final.mp4')
 })
 
 test('return_to_queue clears session and moves to queue', () => {

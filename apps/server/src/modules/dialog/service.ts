@@ -14,6 +14,7 @@ import {
 type DialogServiceOptions = {
   scenarioPath?: string
   videoDirectory?: string
+  logger?: DialogLogger
 }
 
 export type SessionStepBuildResult = {
@@ -33,6 +34,10 @@ export type DialogService = {
   }) => SessionStepBuildResult
 }
 
+type DialogLogger = {
+  error: (payload: Record<string, unknown>, message?: string) => void
+}
+
 const ScenarioDocumentSchema = z.record(z.string(), z.array(ScenarioNodeSchema))
 
 type ScenarioData = {
@@ -40,6 +45,42 @@ type ScenarioData = {
   byId: Map<string, ScenarioNode>
   rootStepId: StepId
 }
+
+type ScenarioIssueSummary = {
+  path: string
+  pathArray: (string | number)[]
+  code: z.ZodIssue['code']
+  message: string
+}
+
+const defaultLogger: DialogLogger = {
+  error: (payload, message) => {
+    const entry = {
+      level: 'error',
+      ts: new Date().toISOString(),
+      ...payload,
+      msg: message ?? 'error',
+    }
+    console.error(JSON.stringify(entry))
+  },
+}
+
+const formatZodPath = (pathItems: (string | number)[]): string => {
+  if (pathItems.length === 0) return '(root)'
+  return pathItems.reduce((acc, segment) => {
+    if (typeof segment === 'number') return `${acc}[${segment}]`
+    if (acc === '') return segment
+    return `${acc}.${segment}`
+  }, '')
+}
+
+const summarizeIssues = (issues: z.ZodIssue[]): ScenarioIssueSummary[] =>
+  issues.map((issue) => ({
+    path: formatZodPath(issue.path),
+    pathArray: issue.path,
+    code: issue.code,
+    message: issue.message,
+  }))
 
 const resolveScenarioPath = (override?: string): string => {
   if (override) return override
@@ -69,17 +110,35 @@ const resolveVideoDirectory = (override?: string): string => {
   return found
 }
 
-const loadScenarioData = (scenarioPath: string, videoDirectory: string): ScenarioData => {
+const loadScenarioData = (
+  scenarioPath: string,
+  videoDirectory: string,
+  logger: DialogLogger
+): ScenarioData => {
   const raw = readFileSync(scenarioPath, 'utf-8')
   let parsedJson: unknown
   try {
     parsedJson = JSON.parse(raw)
-  } catch {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    logger.error(
+      { event: 'SCENARIO_INVALID_JSON', scenarioPath, errorMessage: message },
+      'scenario_invalid_json'
+    )
     throw new Error('SCENARIO_INVALID_JSON')
   }
 
   const parsed = ScenarioDocumentSchema.safeParse(parsedJson)
   if (!parsed.success) {
+    logger.error(
+      {
+        event: 'SCENARIO_INVALID',
+        scenarioPath,
+        issues: summarizeIssues(parsed.error.issues),
+        issueCount: parsed.error.issues.length,
+      },
+      'scenario_invalid'
+    )
     throw new Error('SCENARIO_INVALID')
   }
 
@@ -156,7 +215,8 @@ const mapChoices = (choices?: Record<string, string>) => {
 export const createDialogService = (options: DialogServiceOptions = {}): DialogService => {
   const scenarioPath = resolveScenarioPath(options.scenarioPath)
   const videoDirectory = resolveVideoDirectory(options.videoDirectory)
-  const scenario = loadScenarioData(scenarioPath, videoDirectory)
+  const logger = options.logger ?? defaultLogger
+  const scenario = loadScenarioData(scenarioPath, videoDirectory, logger)
 
   return {
     rootStepId: scenario.rootStepId,

@@ -258,7 +258,6 @@ export const appReducer = (state: AppState, action: AppAction): AppState => {
         ...state,
         uiState: 'SESSION_ENDED',
         error: null,
-        currentStep: null,
         choices: [],
         turnDeviceId: null,
         sessionEndReason: action.reason,
