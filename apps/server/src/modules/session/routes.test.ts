@@ -77,6 +77,7 @@ const buildApp = () => {
       });
       return { payload, videoUrl };
     },
+    computePreloadVideoUrls: () => [],
   };
   const socketHub: SocketHub = {
     emitPartnerFound: () => true,
