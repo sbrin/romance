@@ -41,6 +41,7 @@ const resolveAssetsRoot = () => {
 fastify.register(fastifyStatic, {
   root: resolveAssetsRoot(),
   prefix: '/videos/',
+  maxAge: '1h',
 });
 
 fastify.get('/ping', async () => ({

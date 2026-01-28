@@ -522,10 +522,15 @@ function App() {
     dispatch({ type: 'RETURN_TO_QUEUE' })
   }
 
+
   const baseUrl = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : ''
-  const videoSrc = state.currentStep?.videoUrl
-    ? `${baseUrl}/videos/${state.currentStep.videoUrl}`
-    : undefined
+  const preloadedUrl = state.currentStep?.videoUrl
+    ? videoPreloader.getVideoUrl(state.currentStep.videoUrl)
+    : null
+
+  const videoSrc =
+    preloadedUrl ||
+    (state.currentStep?.videoUrl ? `${baseUrl}/videos/${state.currentStep.videoUrl}` : undefined)
   const hasVideo = Boolean(videoSrc)
   const showExitButton = EXIT_AVAILABLE_STATES.includes(state.uiState)
 

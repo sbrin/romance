@@ -1,33 +1,40 @@
-type VideoStatus = 'idle' | 'loading' | 'ready' | 'failed';
+
+import { API_BASE_URL } from '../../api/http'
+
+type VideoStatus = 'idle' | 'loading' | 'ready' | 'failed'
 
 class VideoPreloader {
-  private cache: Map<string, VideoStatus> = new Map();
-  private videos: Map<string, HTMLVideoElement> = new Map();
+  private cache: Map<string, VideoStatus> = new Map()
+  private blobUrls: Map<string, string> = new Map()
 
   /**
-   * Предзагружает видео в фоне
+   * Предзагружает видео в фоне используя fetch для полной загрузки
    */
-  preload(videoUrls: string[]): void {
+  async preload(videoUrls: string[]): Promise<void> {
+    const baseUrl = API_BASE_URL ? API_BASE_URL.replace(/\/$/, '') : ''
+
     for (const url of videoUrls) {
       if (this.cache.get(url) !== 'idle' && this.cache.has(url)) {
-        continue; // уже загружается или готово
+        continue // уже загружается или готово
       }
 
-      this.cache.set(url, 'loading');
-      const video = document.createElement('video');
-      video.preload = 'auto';
-      video.src = `/videos/${url}`;
+      this.cache.set(url, 'loading')
 
-      video.addEventListener('canplaythrough', () => {
-        this.cache.set(url, 'ready');
-        this.videos.set(url, video);
-      });
+      try {
+        const fullUrl = `${baseUrl}/videos/${url}`
+        const response = await fetch(fullUrl)
+        if (!response.ok) {
+          throw new Error(`Failed to load video: ${response.statusText}`)
+        }
+        const blob = await response.blob()
+        const blobUrl = URL.createObjectURL(blob)
 
-      video.addEventListener('error', () => {
-        this.cache.set(url, 'failed');
-      });
-
-      video.load();
+        this.blobUrls.set(url, blobUrl)
+        this.cache.set(url, 'ready')
+      } catch (error) {
+        console.error(`Failed to preload video ${url}`, error)
+        this.cache.set(url, 'failed')
+      }
     }
   }
 
@@ -35,26 +42,26 @@ class VideoPreloader {
    * Проверяет, готово ли видео
    */
   isReady(videoUrl: string): boolean {
-    return this.cache.get(videoUrl) === 'ready';
+    return this.cache.get(videoUrl) === 'ready'
   }
 
   /**
-   * Получает предзагруженное видео (если готово)
+   * Получает URL предзагруженного видео (если готово)
    */
-  getVideo(videoUrl: string): HTMLVideoElement | null {
-    return this.videos.get(videoUrl) ?? null;
+  getVideoUrl(videoUrl: string): string | null {
+    return this.blobUrls.get(videoUrl) ?? null
   }
 
   /**
    * Очищает кэш (при завершении сессии)
    */
   clear(): void {
-    for (const video of this.videos.values()) {
-      video.src = '';
+    for (const url of this.blobUrls.values()) {
+      URL.revokeObjectURL(url)
     }
-    this.cache.clear();
-    this.videos.clear();
+    this.blobUrls.clear()
+    this.cache.clear()
   }
 }
 
-export const videoPreloader = new VideoPreloader();
+export const videoPreloader = new VideoPreloader()
