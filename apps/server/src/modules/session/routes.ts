@@ -174,12 +174,14 @@ export const registerSessionRoutes = (
       user.status = SESSION_STATE.ACTIVE;
 
       const previousVideoUrl = session.lastVideoByRole[user.role] ?? null;
+      const shouldPreload = user.deviceId !== session.turnDeviceId;
       const { payload, videoUrl } = deps.dialogService.createSessionStepEvent({
         sessionId: session.id,
         stepId,
         role: user.role,
         turnDeviceId: session.turnDeviceId,
         previousVideoUrl,
+        shouldPreload,
       });
       session.lastVideoByRole[user.role] = videoUrl;
 
@@ -247,12 +249,14 @@ export const registerSessionRoutes = (
               throw new Error('ROLE_REQUIRED');
             }
             const previousVideoUrl = result.session.lastVideoByRole[user.role] ?? null;
+            const shouldPreload = user.deviceId !== result.session.turnDeviceId;
             const { payload, videoUrl } = deps.dialogService.createSessionStepEvent({
               sessionId: result.session.id,
               stepId,
               role: user.role,
               turnDeviceId: result.session.turnDeviceId,
               previousVideoUrl,
+              shouldPreload,
             });
             result.session.lastVideoByRole[user.role] = videoUrl;
             deps.socketHub.emitSessionStep(user.deviceId, payload);
@@ -350,12 +354,14 @@ export const registerSessionRoutes = (
           throw new Error('ROLE_REQUIRED');
         }
         const previousVideoUrl = session.lastVideoByRole[member.role] ?? null;
+        const shouldPreload = member.deviceId !== session.turnDeviceId;
         const { payload, videoUrl } = deps.dialogService.createSessionStepEvent({
           sessionId: session.id,
           stepId: nextStepId,
           role: member.role,
           turnDeviceId: session.turnDeviceId,
           previousVideoUrl,
+          shouldPreload,
         });
         session.lastVideoByRole[member.role] = videoUrl;
         deps.socketHub.emitSessionStep(member.deviceId, payload);

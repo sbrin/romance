@@ -46,3 +46,19 @@ test('SessionStepEventSchema validates event payload', () => {
   const parsed = SessionStepEventSchema.safeParse(payload)
   assert.equal(parsed.success, true)
 })
+
+test('SessionStepEventSchema accepts preloadVideoUrls', () => {
+  const payload = {
+    sessionId: 'session-12345678',
+    stepId: 'step-12345678',
+    actor: { name: 'She', avatarPath: 'avatars/she.png' },
+    bubbleText: 'Привет',
+    choices: [{ id: 'step-abcdef12', text: 'Да' }],
+    videoUrl: 'f1.mp4',
+    turnDeviceId: 'device-12345678',
+    preloadVideoUrls: ['f2.mp4', 'f3.mp4'],
+  }
+
+  const parsed = SessionStepEventSchema.safeParse(payload)
+  assert.equal(parsed.success, true)
+})

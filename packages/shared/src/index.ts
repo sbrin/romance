@@ -185,6 +185,7 @@ export const SessionStepEventSchema = z.object({
   choices: z.array(SessionStepChoiceSchema),
   videoUrl: z.string().min(1),
   turnDeviceId: DeviceIdSchema,
+  preloadVideoUrls: z.array(z.string()).optional(),
 });
 export type SessionStepEvent = z.infer<typeof SessionStepEventSchema>;
 

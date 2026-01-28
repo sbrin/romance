@@ -31,7 +31,9 @@ export type DialogService = {
     role: UserRole
     turnDeviceId: string
     previousVideoUrl?: string | null
+    shouldPreload?: boolean
   }) => SessionStepBuildResult
+  computePreloadVideoUrls: (params: { stepId: StepId; role: UserRole }) => string[]
 }
 
 type DialogLogger = {
@@ -224,6 +226,28 @@ export const createDialogService = (options: DialogServiceOptions = {}): DialogS
   const logger = options.logger ?? defaultLogger
   const scenario = loadScenarioData(scenarioPath, videoDirectory, logger)
 
+  const computePreloadVideoUrls = (params: { stepId: StepId; role: UserRole }): string[] => {
+    const step = scenario.byId.get(params.stepId)
+    if (!step || !step.choices) {
+      return []
+    }
+
+    const roleKey = mapRoleToVideoKey(params.role)
+    const videoUrls: string[] = []
+
+    for (const nextStepId of Object.keys(step.choices)) {
+      const nextStep = scenario.byId.get(nextStepId)
+      if (!nextStep) continue
+
+      const videoId = nextStep.videoByRole?.[roleKey]
+      if (videoId) {
+        videoUrls.push(`${videoId}.mp4`)
+      }
+    }
+
+    return videoUrls
+  }
+
   return {
     rootStepId: scenario.rootStepId,
     getStep: (stepId) => {
@@ -239,12 +263,18 @@ export const createDialogService = (options: DialogServiceOptions = {}): DialogS
       role,
       turnDeviceId,
       previousVideoUrl,
+      shouldPreload = false,
     }) => {
       const step = scenario.byId.get(stepId)
       if (!step) {
         throw new Error('STEP_NOT_FOUND')
       }
       const videoUrl = resolveVideoUrl(step, role, previousVideoUrl)
+
+      const preloadVideoUrls = shouldPreload
+        ? computePreloadVideoUrls({ stepId, role })
+        : undefined
+
       const payload = SessionStepEventSchema.parse({
         sessionId,
         stepId: step.id,
@@ -256,8 +286,10 @@ export const createDialogService = (options: DialogServiceOptions = {}): DialogS
         choices: mapChoices(step.choices),
         videoUrl,
         turnDeviceId,
+        preloadVideoUrls,
       })
       return { payload, videoUrl }
     },
+    computePreloadVideoUrls,
   }
 }

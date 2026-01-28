@@ -16,7 +16,7 @@
       ],
       "prev": [],
       "choices": {
-        "77B0EBAFFA5F42ACBAC516F4280AD59F": "Да",
+        "77B0EBAFFA5F42ACBAC516F4280AD59F": "Го секс",
         "A7665CBBEDF54F1B95AF9E49B8E9C570": "Нет",
         "157B37D2777F4F89A5775A402A27EC86": "Не знаю"
       },
@@ -93,7 +93,7 @@
         "name": "He",
         "avatarPath": "images/1769508635885_Screenshot 2026-01-27 at 14.06.42.png"
       },
-      "text": "Бла",
+      "text": "Ты тоже хорош",
       "next": "end",
       "prev": [
         "77B0EBAFFA5F42ACBAC516F4280AD59F"
@@ -102,7 +102,7 @@
         "male": "f2"
       },
       "choices": {
-        "157B37D2777F4F89A5775A402A27EC86": "Нет",
+        "157B37D2777F4F89A5775A402A27EC86": "Ой я передумал",
         "A7665CBBEDF54F1B95AF9E49B8E9C570": "Не знаю"
       }
     },

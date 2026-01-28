@@ -160,3 +160,91 @@ test('dialog loader logs invalid json details', () => {
   assert.equal(payload.event, 'SCENARIO_INVALID_JSON')
   assert.equal(typeof payload.errorMessage, 'string')
 })
+
+test('computePreloadVideoUrls returns video URLs for next steps', () => {
+  const baseDir = createTempDir()
+  const videoDir = path.join(baseDir, 'videos')
+  mkdirSync(videoDir)
+  writeVideo(videoDir, 'f1')
+  writeVideo(videoDir, 'm1')
+  writeVideo(videoDir, 'f2')
+  writeVideo(videoDir, 'm2')
+  writeVideo(videoDir, 'f3')
+  writeVideo(videoDir, 'm3')
+
+  const scenario = {
+    scenario: [
+      {
+        id: 'step-11111111',
+        actor: { name: 'He' },
+        text: 'Привет',
+        prev: [],
+        choices: { 'step-2a222222': 'Да', 'step-2b333333': 'Нет' },
+        videoByRole: { male: 'f1', female: 'm1' },
+      },
+      {
+        id: 'step-2a222222',
+        actor: { name: 'She' },
+        text: 'Круто',
+        prev: ['step-11111111'],
+        videoByRole: { male: 'f2', female: 'm2' },
+      },
+      {
+        id: 'step-2b333333',
+        actor: { name: 'She' },
+        text: 'Окей',
+        prev: ['step-11111111'],
+        videoByRole: { male: 'f3', female: 'm3' },
+      },
+    ],
+  }
+
+  const scenarioPath = writeScenario(baseDir, scenario)
+  const service = createDialogService({
+    scenarioPath,
+    videoDirectory: videoDir,
+    logger: { error: () => {} },
+  })
+
+  const urls = service.computePreloadVideoUrls({
+    stepId: 'step-11111111',
+    role: USER_ROLE.MALE,
+  })
+
+  assert.deepEqual(urls, ['f2.mp4', 'f3.mp4'])
+})
+
+test('computePreloadVideoUrls returns empty array for terminal steps', () => {
+  const baseDir = createTempDir()
+  const videoDir = path.join(baseDir, 'videos')
+  mkdirSync(videoDir)
+  writeVideo(videoDir, 'f1')
+  writeVideo(videoDir, 'm1')
+
+  const scenario = {
+    scenario: [
+      {
+        id: 'step-12345678',
+        actor: { name: 'He' },
+        text: 'Привет',
+        prev: [],
+        choices: {},
+        videoByRole: { male: 'f1', female: 'm1' },
+      },
+    ],
+  }
+
+  const scenarioPath = writeScenario(baseDir, scenario)
+  const service = createDialogService({
+    scenarioPath,
+    videoDirectory: videoDir,
+    logger: { error: () => {} },
+  })
+
+  const urls = service.computePreloadVideoUrls({
+    stepId: 'step-12345678',
+    role: USER_ROLE.MALE,
+  })
+
+  assert.deepEqual(urls, [])
+})

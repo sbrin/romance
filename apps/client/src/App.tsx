@@ -46,6 +46,7 @@ import PartnerFound from './features/search/PartnerFound'
 import PartnerCancelled from './features/search/PartnerCancelled'
 import SessionStep from './features/session/SessionStep'
 import SessionEnded from './features/session/SessionEnded'
+import { videoPreloader } from './features/session/videoPreloader'
 import ScreenFrame from './ui/ScreenFrame'
 
 const EXIT_AVAILABLE_STATES: UiState[] = [
@@ -129,6 +130,12 @@ function App() {
     if (!parsed.success) {
       return
     }
+
+    // Запустить предзагрузку если есть список
+    if (parsed.data.preloadVideoUrls && parsed.data.preloadVideoUrls.length > 0) {
+      videoPreloader.preload(parsed.data.preloadVideoUrls)
+    }
+
     dispatch({ type: 'SESSION_STEP_RECEIVED', payload: parsed.data })
   })
 
@@ -137,6 +144,10 @@ function App() {
     if (!parsed.success) {
       return
     }
+
+    // Очистить кэш предзагруженных видео
+    videoPreloader.clear()
+
     dispatch({
       type: 'SESSION_ENDED',
       sessionId: parsed.data.sessionId,
@@ -552,19 +563,21 @@ function App() {
           {state.uiState === 'SESSION_STARTED' && (
             <PartnerFound status="started" onStart={handleStartSession} />
           )}
-          {state.uiState === 'ACTIVE_MY_TURN' && state.currentStep && (
+          {state.uiState === 'ACTIVE_MY_TURN' && state.currentStep && state.role && (
             <SessionStep
               step={state.currentStep}
               choices={state.choices}
               isMyTurn
+              userRole={state.role}
               onChoice={handleChoice}
             />
           )}
-          {state.uiState === 'ACTIVE_WAIT' && state.currentStep && (
+          {state.uiState === 'ACTIVE_WAIT' && state.currentStep && state.role && (
             <SessionStep
               step={state.currentStep}
               choices={state.choices}
               isMyTurn={false}
+              userRole={state.role}
             />
           )}
           {state.uiState === 'SESSION_ENDED' && (
