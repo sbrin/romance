@@ -145,9 +145,6 @@ function App() {
       return
     }
 
-    // Очистить кэш предзагруженных видео
-    videoPreloader.clear()
-
     dispatch({
       type: 'SESSION_ENDED',
       sessionId: parsed.data.sessionId,
@@ -233,6 +230,7 @@ function App() {
 
   useEffect(() => {
     const handleExit = () => {
+      videoPreloader.clear()
       const current = latestStateRef.current
       if (!CANCEL_ON_EXIT_STATES.includes(current.uiState)) {
         return
@@ -436,6 +434,7 @@ function App() {
   }
 
   const handleCancelSearch = () => {
+    videoPreloader.clear()
     if (EXIT_AVAILABLE_STATES.includes(state.uiState)) {
       const parsed = QueueCancelRequestSchema.safeParse({ deviceId: state.deviceId })
       if (parsed.success) {
@@ -448,6 +447,7 @@ function App() {
   }
 
   const handleStartSearch = () => {
+    videoPreloader.clear()
     dispatch({ type: 'START_SEARCH' })
   }
 
@@ -504,6 +504,7 @@ function App() {
 
   const handleReturnToQueue = async () => {
     if (!state.sessionId) {
+      videoPreloader.clear()
       dispatch({ type: 'RETURN_TO_QUEUE' })
       return
     }
@@ -519,6 +520,7 @@ function App() {
       return
     }
 
+    videoPreloader.clear()
     dispatch({ type: 'RETURN_TO_QUEUE' })
   }
 
