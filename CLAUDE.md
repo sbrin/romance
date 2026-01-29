@@ -300,8 +300,19 @@ All packages use strict TypeScript:
 1. **Shared package changes**: Always rebuild shared package after schema changes (`cd packages/shared && pnpm build`)
 2. **Turn validation**: Never allow actions from non-turn users - always check `turnDeviceId`
 3. **Device ID persistence**: Don't clear localStorage.deviceId unless implementing explicit logout
-4. **Socket.io reconnection**: Device ID must be included in auth on every connection
+4. **Socket.io reconnection**: Device ID must be included in auth on every connection. Auto-reconnect is built-in (default: enabled). On reconnect, client calls `/session/resume` to restore state
 5. **Video file paths**: Video IDs in scenario must match actual `.mp4` files in `assets/s1/`
 6. **Queue idempotence**: Repeated `/queue/join` should not duplicate user in queue
 7. **Session recovery**: Test with page refresh during every session state
 8. **Zod errors**: Always handle `.safeParse()` error cases - never assume validation succeeds
+
+## CRITICAL: Use Built-in Library Features
+
+**BEFORE implementing any new functionality, ALWAYS check if the library/framework already provides it.**
+
+### General Rules
+
+1. **NEVER reimplement** what the library provides natively
+2. **Check documentation first** before writing custom solutions
+3. **Search codebase** for existing patterns before creating new ones
+4. **Ask if unsure** whether something already exists

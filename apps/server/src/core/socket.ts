@@ -9,6 +9,7 @@ import {
   SOCKET_EVENT,
 } from '@romance/shared';
 import { ensureUser, type Store } from './store';
+import { cancelSearch } from '../modules/searching/service';
 
 export type SocketHub = {
   emitPartnerFound: (deviceId: string, payload: { sessionId: string }) => boolean;
@@ -18,28 +19,12 @@ export type SocketHub = {
   emitSessionEnded: (deviceId: string, payload: unknown) => boolean;
 };
 
-export const createSocketHub = (io: Server, store: Store): SocketHub => {
-  io.on('connection', (socket) => {
-    const auth = SocketAuthSchema.safeParse(socket.handshake.auth);
-    if (!auth.success) {
-      socket.emit('error', 'INVALID_AUTH');
-      socket.disconnect(true);
-      return;
-    }
+export type SocketLogger = {
+  info: (obj: Record<string, unknown>, msg: string) => void;
+};
 
-    const { deviceId } = auth.data;
-    const user = ensureUser(store, deviceId);
-    user.socketId = socket.id;
-
-    socket.on('disconnect', () => {
-      const current = store.users.get(deviceId);
-      if (current?.socketId === socket.id) {
-        current.socketId = undefined;
-      }
-    });
-  });
-
-  return {
+export const createSocketHub = (io: Server, store: Store, logger: SocketLogger): SocketHub => {
+  const hub: SocketHub = {
     emitPartnerFound: (deviceId, payload) => {
       const parsed = PartnerFoundEventSchema.safeParse(payload);
       if (!parsed.success) return false;
@@ -81,4 +66,48 @@ export const createSocketHub = (io: Server, store: Store): SocketHub => {
       return true;
     },
   };
+
+  io.on('connection', (socket) => {
+    const auth = SocketAuthSchema.safeParse(socket.handshake.auth);
+    if (!auth.success) {
+      socket.emit('error', 'INVALID_AUTH');
+      socket.disconnect(true);
+      return;
+    }
+
+    const { deviceId } = auth.data;
+    const user = ensureUser(store, deviceId);
+    user.socketId = socket.id;
+
+    socket.on('disconnect', () => {
+      const current = store.users.get(deviceId);
+      if (current?.socketId !== socket.id) {
+        return;
+      }
+
+      current.socketId = undefined;
+
+      const result = cancelSearch(store, deviceId);
+
+      if (result.partnerId || result.sessionId) {
+        logger.info(
+          {
+            event: 'socket_disconnect_cleanup',
+            deviceId,
+            sessionId: result.sessionId,
+            partnerId: result.partnerId,
+          },
+          'User disconnected, cleaned up queue/session'
+        );
+      }
+
+      if (result.partnerId && result.sessionId) {
+        hub.emitPartnerCancelled(result.partnerId, {
+          sessionId: result.sessionId,
+        });
+      }
+    });
+  });
+
+  return hub;
 };

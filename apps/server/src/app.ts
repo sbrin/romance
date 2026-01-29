@@ -19,10 +19,12 @@ const io = new Server(fastify.server, {
   cors: {
     origin: '*',
   },
+  pingInterval: 5000,
+  pingTimeout: 5000,
 });
 
 const store = createStore();
-const socketHub = createSocketHub(io, store);
+const socketHub = createSocketHub(io, store, fastify.log);
 const sessionService = createSessionService(store);
 const dialogService = createDialogService({ logger: fastify.log });
 

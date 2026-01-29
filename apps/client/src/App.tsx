@@ -78,9 +78,11 @@ function App() {
     return createInitialState(deviceId, role, resumeSession)
   })
   const [isSubmittingRole, setIsSubmittingRole] = useState(false)
+  const [isReconnecting, setIsReconnecting] = useState(false)
   const roleSyncedRef = useRef(false)
   const latestStateRef = useRef(state)
   const queuedResumeRef = useRef(false)
+  const wasConnectedRef = useRef(false)
 
   useEffect(() => {
     latestStateRef.current = state
@@ -152,8 +154,80 @@ function App() {
     })
   })
 
+    socket.on('disconnect', () => {
+      if (wasConnectedRef.current) {
+        setIsReconnecting(true)
+      }
+    })
+
+    socket.on('connect', () => {
+      const isReconnect = wasConnectedRef.current
+      wasConnectedRef.current = true
+
+      if (!isReconnect) return
+      setIsReconnecting(false)
+
+      const current = latestStateRef.current
+      const activeStates: UiState[] = [
+        'QUEUE',
+        'PARTNER_FOUND',
+        'WAITING_FOR_START',
+        'SESSION_STARTED',
+        'ACTIVE_MY_TURN',
+        'ACTIVE_WAIT',
+      ]
+      if (!activeStates.includes(current.uiState)) return
+
+      const resumeAfterReconnect = async () => {
+        try {
+          const request = SessionResumeRequestSchema.parse({ deviceId: state.deviceId })
+          const response = await postJson(
+            '/session/resume',
+            request,
+            SessionResumeResponseSchema
+          )
+
+          if (response.status === SESSION_RESUME_STATUS.ACTIVE && response.step) {
+            dispatch({ type: 'SESSION_RESUMED', payload: response.step })
+            return
+          }
+
+          if (
+            (response.status === SESSION_RESUME_STATUS.FOUND ||
+              response.status === SESSION_RESUME_STATUS.WAITING) &&
+            response.sessionId
+          ) {
+            dispatch({
+              type: 'SESSION_MATCH_RESUMED',
+              sessionId: response.sessionId,
+              waitingForStart: response.status === SESSION_RESUME_STATUS.WAITING,
+            })
+            return
+          }
+
+          if (response.status === SESSION_RESUME_STATUS.QUEUED) {
+            dispatch({ type: 'QUEUE_JOINED' })
+            return
+          }
+
+          if (response.status === SESSION_RESUME_STATUS.NONE) {
+            clearStoredSession()
+            if (activeStates.includes(current.uiState)) {
+              dispatch({ type: 'RETURN_TO_START', error: 'Сессия была завершена.' })
+            }
+          }
+        } catch {
+          // Silent fail - user can manually refresh if needed
+        }
+      }
+
+      void resumeAfterReconnect()
+    })
+
     socket.on('connect_error', () => {
-      dispatch({ type: 'ERROR', message: 'Не удалось подключиться к серверу.' })
+      if (!wasConnectedRef.current) {
+        dispatch({ type: 'ERROR', message: 'Не удалось подключиться к серверу.' })
+      }
     })
 
     return () => {
@@ -595,7 +669,12 @@ function App() {
           )}
         </div>
 
-        {state.error && (
+        {isReconnecting && (
+          <div className="reconnecting-toast" role="status">
+            Переподключение...
+          </div>
+        )}
+        {state.error && !isReconnecting && (
           <div className="error-toast" role="status">
             {state.error}
           </div>

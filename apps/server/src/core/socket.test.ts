@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import type { Server } from 'socket.io';
 import { SOCKET_EVENT } from '@romance/shared';
 import { createStore } from './store';
-import { createSocketHub } from './socket';
+import { createSocketHub, type SocketLogger } from './socket';
+
+const fakeLogger: SocketLogger = {
+  info: () => {},
+};
 
 type EmittedEvent = { event: string; payload: unknown };
 
@@ -68,7 +72,7 @@ class FakeServer {
 test('socket auth rejects invalid deviceId', () => {
   const store = createStore();
   const io = new FakeServer();
-  createSocketHub(io as unknown as Server, store);
+  createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-1', { deviceId: 'short' });
   io.triggerConnection(socket);
@@ -82,7 +86,7 @@ test('socket auth rejects invalid deviceId', () => {
 test('socket auth stores socketId and clears on disconnect', () => {
   const store = createStore();
   const io = new FakeServer();
-  createSocketHub(io as unknown as Server, store);
+  createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-2', { deviceId: 'device-1234' });
   io.triggerConnection(socket);
@@ -97,7 +101,7 @@ test('socket auth stores socketId and clears on disconnect', () => {
 test('emitPartnerFound sends partner_found event to connected socket', () => {
   const store = createStore();
   const io = new FakeServer();
-  const socketHub = createSocketHub(io as unknown as Server, store);
+  const socketHub = createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-3', { deviceId: 'device-5678' });
   io.triggerConnection(socket);
@@ -115,7 +119,7 @@ test('emitPartnerFound sends partner_found event to connected socket', () => {
 test('emitPartnerCancelled sends partner_cancelled event to connected socket', () => {
   const store = createStore();
   const io = new FakeServer();
-  const socketHub = createSocketHub(io as unknown as Server, store);
+  const socketHub = createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-4', { deviceId: 'device-9999' });
   io.triggerConnection(socket);
@@ -133,7 +137,7 @@ test('emitPartnerCancelled sends partner_cancelled event to connected socket', (
 test('emitSessionStarted sends session_started event to connected socket', () => {
   const store = createStore();
   const io = new FakeServer();
-  const socketHub = createSocketHub(io as unknown as Server, store);
+  const socketHub = createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-5', { deviceId: 'device-7777' });
   io.triggerConnection(socket);
@@ -151,7 +155,7 @@ test('emitSessionStarted sends session_started event to connected socket', () =>
 test('emitSessionStep sends session_step event to connected socket', () => {
   const store = createStore();
   const io = new FakeServer();
-  const socketHub = createSocketHub(io as unknown as Server, store);
+  const socketHub = createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-6', { deviceId: 'device-8888' });
   io.triggerConnection(socket);
@@ -179,7 +183,7 @@ test('emitSessionStep sends session_step event to connected socket', () => {
 test('emitSessionEnded sends session_ended event to connected socket', () => {
   const store = createStore();
   const io = new FakeServer();
-  const socketHub = createSocketHub(io as unknown as Server, store);
+  const socketHub = createSocketHub(io as unknown as Server, store, fakeLogger);
 
   const socket = new FakeSocket('socket-7', { deviceId: 'device-5555' });
   io.triggerConnection(socket);
