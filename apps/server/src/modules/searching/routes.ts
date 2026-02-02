@@ -49,6 +49,16 @@ export const registerSearchingRoutes = (
 
       const { deviceId, role } = parsed.data;
       const user = ensureUser(deps.store, deviceId);
+
+      if (user.role && user.role !== role) {
+        const result = cancelSearch(deps.store, deviceId);
+        if (result.partnerId && result.sessionId) {
+          deps.socketHub.emitPartnerCancelled(result.partnerId, {
+            sessionId: result.sessionId,
+          });
+        }
+      }
+
       user.role = role;
 
       logEvent(request, ANALYTICS_EVENT.SELECTED_GENDER, { deviceId, role });

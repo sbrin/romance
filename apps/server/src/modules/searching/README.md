@@ -10,7 +10,7 @@
 
 ## Контракты
 
-- `POST /role`
+- `POST /role` — сохраняет роль, отменяет активную сессию/поиск, если роль изменилась.
 - `POST /queue/join`
 - `POST /queue/cancel`
 - WS события: `partner_found`, `partner_cancelled`

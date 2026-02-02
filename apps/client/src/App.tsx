@@ -26,6 +26,7 @@ import {
   SocketAuthSchema,
   type QueueJoinResponse,
   type UserRole,
+  USER_ROLE,
 } from '@romance/shared'
 import './App.css'
 import { ApiError, API_BASE_URL, postJson, sendBeaconJson } from './api/http'
@@ -71,10 +72,25 @@ const RESUME_SESSION_STATES: UiState[] = [
 ]
 
 function App() {
+  const pendingCleanupRef = useRef<{ sessionId: string | null }>({ sessionId: null })
+
   const [state, dispatch] = useReducer(appReducer, undefined, () => {
     const deviceId = getOrCreateDeviceId()
-    const role = getStoredRole()
-    const resumeSession = getStoredSession()
+    let role = getStoredRole()
+    let resumeSession = getStoredSession()
+
+    const path = window.location.pathname
+    // Check for reset paths
+    if (path === '/m' || path === '/m/' || path === '/f' || path === '/f/') {
+      // Set new role
+      role = path.includes('/m') ? USER_ROLE.MALE : USER_ROLE.FEMALE
+      persistRole(role)
+      
+      // Capture session for cleanup, but don't resume it
+      pendingCleanupRef.current = { sessionId: resumeSession?.sessionId || null }
+      resumeSession = null
+    }
+
     return createInitialState(deviceId, role, resumeSession)
   })
   const [isSubmittingRole, setIsSubmittingRole] = useState(false)
@@ -239,6 +255,36 @@ function App() {
     let cancelled = false
 
     const resumeSession = async () => {
+      // Check for reset condition
+      const path = window.location.pathname
+      if (path === '/m' || path === '/m/' || path === '/f' || path === '/f/') {
+        // Perform cleanup
+        videoPreloader.clear()
+        
+        // Cancel queue
+        const cancelQueueReq = QueueCancelRequestSchema.safeParse({ deviceId: state.deviceId })
+        if (cancelQueueReq.success) {
+          postJson('/queue/cancel', cancelQueueReq.data, QueueCancelResponseSchema).catch(() => {})
+        }
+
+        // End session if we had one
+        const previousSessionId = pendingCleanupRef.current.sessionId
+        if (previousSessionId) {
+          const endSessionReq = SessionEndRequestSchema.safeParse({
+            deviceId: state.deviceId,
+            sessionId: previousSessionId,
+          })
+          if (endSessionReq.success) {
+            postJson('/session/end', endSessionReq.data, SessionEndResponseSchema).catch(() => {})
+          }
+        }
+
+        // Clear local storage and URL
+        clearStoredSession()
+        window.history.replaceState(null, '', '/')
+        return
+      }
+
       try {
         const request = SessionResumeRequestSchema.parse({ deviceId: state.deviceId })
         const response = await postJson(

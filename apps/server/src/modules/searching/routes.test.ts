@@ -172,5 +172,48 @@ test('POST /queue/cancel emits partner_cancelled after match', async () => {
   assert.equal(cancelled.length, 1);
   assert.equal(cancelled[0].deviceId, 'device-f');
   assert.equal(cancelled[0].sessionId, body.sessionId);
+  assert.equal(cancelled[0].sessionId, body.sessionId);
+  await fastify.close();
+});
+
+test('POST /role cancels existing session if role changes', async () => {
+  const { fastify, cancelled } = buildApp();
+  // 1. Setup session
+  await fastify.inject({
+    method: 'POST',
+    url: '/role',
+    payload: { deviceId: 'device-m', role: USER_ROLE.MALE },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/role',
+    payload: { deviceId: 'device-f', role: USER_ROLE.FEMALE },
+  });
+  await fastify.inject({
+    method: 'POST',
+    url: '/queue/join',
+    payload: { deviceId: 'device-m' },
+  });
+  const match = await fastify.inject({
+    method: 'POST',
+    url: '/queue/join',
+    payload: { deviceId: 'device-f' },
+  });
+  const matchBody = match.json();
+  assert.equal(matchBody.status, QUEUE_JOIN_STATUS.PARTNER_FOUND);
+
+  // 2. Change role for device-m (simulating /f reset)
+  const roleChange = await fastify.inject({
+    method: 'POST',
+    url: '/role',
+    payload: { deviceId: 'device-m', role: USER_ROLE.FEMALE },
+  });
+
+  // 3. Verify cancellation
+  assert.equal(roleChange.statusCode, 200);
+  assert.equal(cancelled.length, 1);
+  assert.equal(cancelled[0].deviceId, 'device-f');
+  assert.equal(cancelled[0].sessionId, matchBody.sessionId);
+
   await fastify.close();
 });
