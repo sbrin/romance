@@ -108,21 +108,28 @@ Sessions track whose turn it is:
 ### 5. Scenario Structure
 
 Scenarios are immutable graphs loaded at server startup:
-- Defined in JSON (e.g., `assets/s1/s1.json`)
-- Nodes have `id`, `prev[]`, `choices` (key=next step ID, value=text)
+- Defined in JSON (e.g., `assets/s2/s2.json`)
+- Nodes have `id`, `prev[]`, `data.choices` (string array), and `next` (parallel array of step IDs or `"end"`)
+- `data.choices[i]` maps to `next[i]` — choice text and next step ID are paired by index
 - Actor name (`He`/`She`) determines whose turn it is
-- Video IDs map to MP4 files in `assets/s1/`
+- Video: single video per node in `data.fields [{fieldName:"video", fieldValue:"id.mp4"}]`
+  - Actor `She` → video shown to MALE, Actor `He` → video shown to FEMALE
+  - Root node auto-generates initial videos from scenario filename (`<name>m0`, `<name>f0`)
+- `choiceId` is a numeric index (`"0"`, `"1"`, `"2"`), not a step ID
+- `bubbleText` is the text of the choice selected by the partner on the previous step (first step = empty)
+- Terminal nodes have `next: "end"`
 - Contract defined in `packages/shared/contracts-core-flow.md`
 
 **Critical contract rule**: Always check `packages/shared/contracts-core-flow.md` before changing scenario handling or session flow.
 
-### 6. Video Caching Per Role
+### 6. Video Per Role (Derived)
 
-Server caches last video URL per role to avoid redundant updates:
-- Each step specifies `videoByRole: { male?: string, female?: string }`
-- If video ID missing for a role, reuse previous video
+Server derives `videoByRole` internally from the single video per node:
+- Scenario nodes specify one video in `data.fields` (e.g., `s1m1.mp4`)
+- Actor determines who sees it: `She` → MALE, `He` → FEMALE
+- If video is missing for a role on a given step, reuse previous video URL
 - Client continues playing last video until explicitly updated
-- Reduces bandwidth and provides smoother transitions
+- Root node auto-generates both videos from scenario name (`<name>m0`, `<name>f0`)
 
 ### 7. Session Recovery Flow
 
@@ -291,7 +298,7 @@ All packages use strict TypeScript:
 
 - Server is **stateful** (in-memory store) - requires sticky sessions or single instance
 - Client is **static** - can be deployed to CDN
-- Server serves video files from `assets/s1/` via Fastify static plugin
+- Server serves video files from configured assets directory (see `apps/server/src/constants.ts`) via Fastify static plugin
 - Environment variables loaded via `dotenv` (see server code for specifics)
 - No database setup required for V1
 
@@ -301,7 +308,7 @@ All packages use strict TypeScript:
 2. **Turn validation**: Never allow actions from non-turn users - always check `turnDeviceId`
 3. **Device ID persistence**: Don't clear localStorage.deviceId unless implementing explicit logout
 4. **Socket.io reconnection**: Device ID must be included in auth on every connection. Auto-reconnect is built-in (default: enabled). On reconnect, client calls `/session/resume` to restore state
-5. **Video file paths**: Video IDs in scenario must match actual `.mp4` files in `assets/s1/`
+5. **Video file paths**: Video IDs in scenario must match actual `.mp4` files in `assets/<scenario>/` declared in `constants.ts`
 6. **Queue idempotence**: Repeated `/queue/join` should not duplicate user in queue
 7. **Session recovery**: Test with page refresh during every session state
 8. **Zod errors**: Always handle `.safeParse()` error cases - never assume validation succeeds

@@ -26,7 +26,7 @@ test('persistSession stores and getStoredSession restores', () => {
       stepId: 'step-12345678',
       actor: { name: 'He' },
       bubbleText: 'Привет',
-      choices: [{ id: 'step-abcdef12', text: 'Да' }],
+      choices: [{ id: '0', text: 'Да' }],
       videoUrl: 'm1.mp4',
       turnDeviceId: 'device-12345678',
     },

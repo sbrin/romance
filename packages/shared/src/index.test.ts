@@ -5,15 +5,41 @@ import {
   SessionStepEventSchema,
 } from './index'
 
-test('ScenarioNodeSchema accepts minimal node with passthrough fields', () => {
+test('ScenarioNodeSchema accepts node in new editor format', () => {
+  const payload = {
+    type: 'Text',
+    id: 'step-12345678',
+    nodeType: 'dialogNode',
+    data: {
+      actor: { name: 'He', avatarPath: 'avatars/he.png', mood: 'calm' },
+      speech: '',
+      actorList: [{ name: 'She' }, { name: 'He' }],
+      fieldList: [{ name: 'video', type: 'string' }],
+      choices: ['Да', 'Нет'],
+      fields: [{ fieldName: 'video', fieldValue: 's1m1.mp4' }],
+    },
+    actor: { name: 'He', avatarPath: 'avatars/he.png', mood: 'calm' },
+    text: '',
+    next: ['step-abcdef12', 'step-bbccdd12'],
+    prev: [],
+    extraField: { nested: true },
+  }
+
+  const parsed = ScenarioNodeSchema.safeParse(payload)
+  assert.equal(parsed.success, true)
+})
+
+test('ScenarioNodeSchema accepts terminal node with next: end', () => {
   const payload = {
     id: 'step-12345678',
-    actor: { name: 'He', avatarPath: 'avatars/he.png', mood: 'calm' },
-    text: 'Привет',
-    prev: [],
-    choices: { 'step-abcdef12': 'Да' },
-    videoByRole: { male: 'm1', female: 'f1' },
-    extraField: { nested: true },
+    data: {
+      actor: { name: 'She' },
+      choices: ['Вариант 1', 'Вариант 2'],
+    },
+    actor: { name: 'She' },
+    text: '',
+    next: 'end',
+    prev: ['step-abcdef12'],
   }
 
   const parsed = ScenarioNodeSchema.safeParse(payload)
@@ -23,8 +49,10 @@ test('ScenarioNodeSchema accepts minimal node with passthrough fields', () => {
 test('ScenarioNodeSchema rejects invalid actor name', () => {
   const payload = {
     id: 'step-12345678',
+    data: { actor: { name: 'They' } },
     actor: { name: 'They' },
-    text: 'Привет',
+    text: '',
+    next: 'end',
     prev: [],
   }
 
@@ -32,13 +60,13 @@ test('ScenarioNodeSchema rejects invalid actor name', () => {
   assert.equal(parsed.success, false)
 })
 
-test('SessionStepEventSchema validates event payload', () => {
+test('SessionStepEventSchema validates event payload with index-based choice IDs', () => {
   const payload = {
     sessionId: 'session-12345678',
     stepId: 'step-12345678',
     actor: { name: 'She', avatarPath: 'avatars/she.png' },
     bubbleText: 'Привет',
-    choices: [{ id: 'step-abcdef12', text: 'Да' }],
+    choices: [{ id: '0', text: 'Да' }, { id: '1', text: 'Нет' }],
     videoUrl: 'f1.mp4',
     turnDeviceId: 'device-12345678',
   }
@@ -53,7 +81,7 @@ test('SessionStepEventSchema accepts preloadVideoUrls', () => {
     stepId: 'step-12345678',
     actor: { name: 'She', avatarPath: 'avatars/she.png' },
     bubbleText: 'Привет',
-    choices: [{ id: 'step-abcdef12', text: 'Да' }],
+    choices: [{ id: '0', text: 'Да' }],
     videoUrl: 'f1.mp4',
     turnDeviceId: 'device-12345678',
     preloadVideoUrls: ['f2.mp4', 'f3.mp4'],
@@ -61,4 +89,19 @@ test('SessionStepEventSchema accepts preloadVideoUrls', () => {
 
   const parsed = SessionStepEventSchema.safeParse(payload)
   assert.equal(parsed.success, true)
+})
+
+test('SessionStepEventSchema rejects non-numeric choice id', () => {
+  const payload = {
+    sessionId: 'session-12345678',
+    stepId: 'step-12345678',
+    actor: { name: 'She' },
+    bubbleText: '',
+    choices: [{ id: 'step-abcdef12', text: 'Да' }],
+    videoUrl: 'f1.mp4',
+    turnDeviceId: 'device-12345678',
+  }
+
+  const parsed = SessionStepEventSchema.safeParse(payload)
+  assert.equal(parsed.success, false)
 })

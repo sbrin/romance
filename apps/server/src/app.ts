@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import fastifyStatic from '@fastify/static';
 import { Server } from 'socket.io';
 import path from 'node:path';
-import { existsSync } from 'node:fs';
+import { ASSETS_DIR, SCENARIOS } from './constants';
 import { createStore } from './core/store';
 import { createSocketHub } from './core/socket';
 import { registerSearchingRoutes } from './modules/searching';
@@ -23,25 +23,14 @@ const io = new Server(fastify.server, {
   pingTimeout: 5000,
 });
 
+
 const store = createStore();
 const socketHub = createSocketHub(io, store, fastify.log);
 const sessionService = createSessionService(store);
 const dialogService = createDialogService({ logger: fastify.log });
 
-const resolveAssetsRoot = () => {
-  const candidates = [
-    path.resolve(process.cwd(), 'assets/s1'),
-    path.resolve(process.cwd(), '../../assets/s1'),
-  ];
-  const found = candidates.find((candidate) => existsSync(candidate));
-  if (!found) {
-    throw new Error('ASSETS_DIRECTORY_NOT_FOUND');
-  }
-  return found;
-};
-
 fastify.register(fastifyStatic, {
-  root: resolveAssetsRoot(),
+  root: path.join(ASSETS_DIR, SCENARIOS[0]),
   prefix: '/videos/',
   maxAge: '1h',
 });

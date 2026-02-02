@@ -165,7 +165,7 @@ test('emitSessionStep sends session_step event to connected socket', () => {
     stepId: 'step-12345678',
     actor: { name: 'He' },
     bubbleText: 'Привет',
-    choices: [{ id: 'step-abcdef12', text: 'Да' }],
+    choices: [{ id: '0', text: 'Да' }],
     videoUrl: 'm1.mp4',
     turnDeviceId: 'device-8888',
   });

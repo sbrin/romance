@@ -182,6 +182,7 @@ export const registerSessionRoutes = (
         turnDeviceId: session.turnDeviceId,
         previousVideoUrl,
         shouldPreload,
+        bubbleText: session.lastBubbleText ?? '',
       });
       session.lastVideoByRole[user.role] = videoUrl;
 
@@ -257,6 +258,7 @@ export const registerSessionRoutes = (
               turnDeviceId: result.session.turnDeviceId,
               previousVideoUrl,
               shouldPreload,
+              bubbleText: '',
             });
             result.session.lastVideoByRole[user.role] = videoUrl;
             deps.socketHub.emitSessionStep(user.deviceId, payload);
@@ -322,9 +324,16 @@ export const registerSessionRoutes = (
       if (!session.currentStepId) {
         session.currentStepId = currentStepId;
       }
-      const currentStep = deps.dialogService.getStep(currentStepId);
-      const choices = currentStep.choices ?? {};
-      if (!Object.prototype.hasOwnProperty.call(choices, choiceId)) {
+
+      const choiceIndex = parseInt(choiceId, 10);
+      if (isNaN(choiceIndex)) {
+        return sendError(reply, 409, 'INVALID_CHOICE');
+      }
+
+      let resolved: { nextStepId: string; choiceText: string };
+      try {
+        resolved = deps.dialogService.resolveChoiceToNextStep(currentStepId, choiceIndex);
+      } catch {
         return sendError(reply, 409, 'INVALID_CHOICE');
       }
 
@@ -335,7 +344,7 @@ export const registerSessionRoutes = (
         choiceId,
       });
 
-      const nextStepId = choiceId;
+      const { nextStepId, choiceText } = resolved;
       const nextStep = deps.dialogService.getStep(nextStepId);
       const turnRole = mapActorToRole(nextStep.actor.name);
       const [firstId, secondId] = session.userIds;
@@ -348,6 +357,7 @@ export const registerSessionRoutes = (
 
       session.currentStepId = nextStepId;
       session.turnDeviceId = turnUser.deviceId;
+      session.lastBubbleText = choiceText;
 
       for (const member of [firstUser, secondUser]) {
         if (!member.role) {
@@ -362,6 +372,7 @@ export const registerSessionRoutes = (
           turnDeviceId: session.turnDeviceId,
           previousVideoUrl,
           shouldPreload,
+          bubbleText: choiceText,
         });
         session.lastVideoByRole[member.role] = videoUrl;
         deps.socketHub.emitSessionStep(member.deviceId, payload);
@@ -373,9 +384,7 @@ export const registerSessionRoutes = (
         });
       }
 
-      const isTerminal =
-        !nextStep.choices || Object.keys(nextStep.choices).length === 0;
-      if (isTerminal) {
+      if (nextStep.isTerminal) {
         finalizeSession(request, session.id, SESSION_END_REASON.COMPLETED);
       }
 

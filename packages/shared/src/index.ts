@@ -142,25 +142,37 @@ export const ScenarioActorSchema = z
   .passthrough();
 export type ScenarioActor = z.infer<typeof ScenarioActorSchema>;
 
-export const ScenarioVideoByRoleSchema = z
-  .object({
-    male: z.string().min(1).optional(),
-    female: z.string().min(1).optional(),
-  })
-  .partial();
-export type ScenarioVideoByRole = z.infer<typeof ScenarioVideoByRoleSchema>;
+export const ChoiceIdSchema = z.string().regex(/^\d+$/);
+export type ChoiceId = z.infer<typeof ChoiceIdSchema>;
 
-export const ScenarioChoicesSchema = z.record(StepIdSchema, z.string());
-export type ScenarioChoices = z.infer<typeof ScenarioChoicesSchema>;
+export const ScenarioNodeFieldSchema = z.object({
+  fieldName: z.string(),
+  fieldValue: z.string(),
+});
+export type ScenarioNodeField = z.infer<typeof ScenarioNodeFieldSchema>;
+
+export const ScenarioNodeDataSchema = z
+  .object({
+    actor: ScenarioActorSchema,
+    speech: z.string().optional(),
+    actorList: z.array(z.object({ name: z.string() })).optional(),
+    fieldList: z
+      .array(z.object({ name: z.string(), type: z.string() }))
+      .optional(),
+    choices: z.array(z.string()).optional(),
+    fields: z.array(ScenarioNodeFieldSchema).optional(),
+  })
+  .passthrough();
+export type ScenarioNodeData = z.infer<typeof ScenarioNodeDataSchema>;
 
 export const ScenarioNodeSchema = z
   .object({
     id: StepIdSchema,
     actor: ScenarioActorSchema,
     text: z.string(),
+    data: ScenarioNodeDataSchema,
     prev: z.array(StepIdSchema),
-    choices: ScenarioChoicesSchema.optional(),
-    videoByRole: ScenarioVideoByRoleSchema.optional(),
+    next: z.union([z.array(StepIdSchema), z.literal('end')]),
   })
   .passthrough();
 export type ScenarioNode = z.infer<typeof ScenarioNodeSchema>;
@@ -172,7 +184,7 @@ export const SessionActorSchema = z.object({
 export type SessionActor = z.infer<typeof SessionActorSchema>;
 
 export const SessionStepChoiceSchema = z.object({
-  id: StepIdSchema,
+  id: ChoiceIdSchema,
   text: z.string(),
 });
 export type SessionStepChoice = z.infer<typeof SessionStepChoiceSchema>;
@@ -246,7 +258,7 @@ export type SessionAnswerStatus = z.infer<typeof SessionAnswerStatusSchema>;
 export const SessionAnswerRequestSchema = z.object({
   deviceId: DeviceIdSchema,
   sessionId: SessionIdSchema,
-  choiceId: StepIdSchema,
+  choiceId: ChoiceIdSchema,
 });
 export type SessionAnswerRequest = z.infer<typeof SessionAnswerRequestSchema>;
 

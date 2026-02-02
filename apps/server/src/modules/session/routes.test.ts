@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify from 'fastify';
+import type { FastifyInstance } from 'fastify';
 import {
   SessionEndedEventSchema,
   SESSION_ANSWER_STATUS,
@@ -11,12 +12,12 @@ import {
   SESSION_START_STATUS,
   USER_ROLE,
   QUEUE_JOIN_STATUS,
-  ScenarioNodeSchema,
 } from '@romance/shared';
 import { createStore } from '../../core/store';
 import type { SocketHub } from '../../core/socket';
 import { registerSearchingRoutes } from '../searching';
 import type { DialogService } from '../dialog';
+import type { InternalNode } from '../dialog/service';
 import { registerSessionRoutes } from './routes';
 import { createSessionService } from './service';
 
@@ -27,22 +28,21 @@ const buildApp = () => {
   const started: Array<{ deviceId: string; sessionId: string }> = [];
   const steps: Array<{ deviceId: string; payload: unknown }> = [];
   const ended: Array<{ deviceId: string; payload: unknown }> = [];
-  const rootStep = ScenarioNodeSchema.parse({
+  const rootStep: InternalNode = {
     id: 'step-12345678',
     actor: { name: 'He' },
-    text: 'Привет',
-    prev: [],
-    choices: { 'step-abcdef12': 'Да' },
+    choices: [{ text: 'Да', nextStepId: 'step-abcdef12' }],
     videoByRole: { male: 'm1', female: 'f1' },
-  });
-  const nextStep = ScenarioNodeSchema.parse({
+    isTerminal: false,
+  };
+  const nextStep: InternalNode = {
     id: 'step-abcdef12',
     actor: { name: 'She' },
-    text: 'Пока',
-    prev: ['step-12345678'],
+    choices: [],
     videoByRole: { male: 'm2', female: 'f2' },
-  });
-  const stepsById = new Map([
+    isTerminal: true,
+  };
+  const stepsById = new Map<string, InternalNode>([
     [rootStep.id, rootStep],
     [nextStep.id, nextStep],
   ]);
@@ -61,21 +61,33 @@ const buildApp = () => {
       role,
       turnDeviceId,
       previousVideoUrl,
+      bubbleText,
     }) => {
       const step = stepsById.get(stepId) ?? rootStep;
       const videoId =
-        role === USER_ROLE.MALE ? step.videoByRole?.male : step.videoByRole?.female;
+        role === USER_ROLE.MALE ? step.videoByRole.male : step.videoByRole.female;
       const videoUrl = videoId ? `${videoId}.mp4` : previousVideoUrl ?? 'fallback.mp4';
       const payload = SessionStepEventSchema.parse({
         sessionId,
         stepId,
         actor: { name: step.actor.name },
-        bubbleText: step.text,
-        choices: step.choices ? [{ id: 'step-abcdef12', text: 'Да' }] : [],
+        bubbleText: bubbleText ?? '',
+        choices: step.choices.map((c, i) => ({ id: String(i), text: c.text })),
         videoUrl,
         turnDeviceId,
       });
       return { payload, videoUrl };
+    },
+    resolveChoiceToNextStep: (stepId, choiceIndex) => {
+      const step = stepsById.get(stepId);
+      if (!step) throw new Error('STEP_NOT_FOUND');
+      if (choiceIndex < 0 || choiceIndex >= step.choices.length) {
+        throw new Error('INVALID_CHOICE');
+      }
+      return {
+        nextStepId: step.choices[choiceIndex].nextStepId,
+        choiceText: step.choices[choiceIndex].text,
+      };
     },
     computePreloadVideoUrls: () => [],
   };
@@ -327,7 +339,7 @@ test('POST /session/step/answer returns NOOP when not your turn', async () => {
   const response = await fastify.inject({
     method: 'POST',
     url: '/session/step/answer',
-    payload: { deviceId: 'device-f', sessionId, choiceId: 'step-abcdef12' },
+    payload: { deviceId: 'device-f', sessionId, choiceId: '0' },
   });
 
   assert.equal(response.statusCode, 200);
@@ -354,7 +366,7 @@ test('POST /session/step/answer advances step and emits next step', async () => 
   const response = await fastify.inject({
     method: 'POST',
     url: '/session/step/answer',
-    payload: { deviceId: 'device-m', sessionId, choiceId: 'step-abcdef12' },
+    payload: { deviceId: 'device-m', sessionId, choiceId: '0' },
   });
 
   assert.equal(response.statusCode, 200);
@@ -388,7 +400,7 @@ test('POST /session/step/answer returns 409 for invalid choice', async () => {
   const response = await fastify.inject({
     method: 'POST',
     url: '/session/step/answer',
-    payload: { deviceId: 'device-m', sessionId, choiceId: 'step-invalid' },
+    payload: { deviceId: 'device-m', sessionId, choiceId: '99' },
   });
 
   assert.equal(response.statusCode, 409);

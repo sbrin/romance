@@ -649,7 +649,6 @@ function App() {
               step={state.currentStep}
               choices={state.choices}
               isMyTurn
-              userRole={state.role}
               onChoice={handleChoice}
             />
           )}
@@ -658,7 +657,6 @@ function App() {
               step={state.currentStep}
               choices={state.choices}
               isMyTurn={false}
-              userRole={state.role}
             />
           )}
           {state.uiState === 'SESSION_ENDED' && (

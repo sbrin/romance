@@ -1,27 +1,25 @@
 import PrimaryActionButton from '../../ui/PrimaryActionButton'
 import type { SessionStepState } from '../../state/appReducer'
-import type { SessionStepEvent, UserRole } from '@romance/shared'
+import type { SessionStepEvent } from '@romance/shared'
 
 type SessionStepProps = {
   step: SessionStepState
   choices: SessionStepEvent['choices']
   isMyTurn: boolean
-  userRole: UserRole
   onChoice?: (choiceId: string) => void
 }
 
-const SessionStep = ({ step, choices, isMyTurn, userRole, onChoice }: SessionStepProps) => {
-  // Показывать bubble только если это шаг для моей роли (т.е. сообщение от партнера ко мне)
-  const shouldShowBubble =
-    (userRole === 'MALE' && step.actor.name === 'He') ||
-    (userRole === 'FEMALE' && step.actor.name === 'She')
+const SessionStep = ({ step, choices, isMyTurn, onChoice }: SessionStepProps) => {
+  // bubbleText — текст выбора, сделанного партнёром на предыдущем шаге
+  // Лейбл: если сейчас ход She (actor=She), значит выбор делал He → "Он", и наоборот
+  const bubbleLabel = step.actor.name === 'She' ? 'Он' : 'Она'
 
   return (
     <div className="session-step">
-      {step.bubbleText && shouldShowBubble && (
+      {step.bubbleText && (
         <div className="session-step__bubble">
           <div className="session-step__actor">
-            {userRole === 'MALE' ? 'Она' : 'Он'}
+            {bubbleLabel}
           </div>
           <p className="session-step__text">{step.bubbleText}</p>
         </div>

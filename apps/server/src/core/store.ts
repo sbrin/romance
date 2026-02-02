@@ -17,6 +17,7 @@ export type Session = {
   currentStepId?: string;
   turnDeviceId?: string;
   lastVideoByRole: Partial<Record<UserRole, string>>;
+  lastBubbleText?: string;
 };
 
 export type Store = {
