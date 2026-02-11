@@ -36,6 +36,8 @@
 - **Build Command**:
   `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
 - **Start Command**: `pnpm -C apps/client preview --host 0.0.0.0 --port $PORT`
+- **Watch Patterns**: включают `assets/**`, поэтому изменение ассетов тоже
+  запускает deploy клиента.
 
 > Примечание: `preview` использует уже собранные статические файлы из `dist`.
 
@@ -83,3 +85,17 @@ Root Directory в настройках сервиса — укажи **абсо�
   `pnpm -w --filter @romance/shared... build && pnpm -w --filter @romance/client... build`
 - **Start Command** для client:
   `/bin/sh -c "pnpm -C apps/client preview -- --host 0.0.0.0 --port $PORT"`
+
+## 8) Частая причина: невалидный `railway.json`
+
+Проверь валидность JSON локально:
+
+```bash
+jq . apps/client/railway.json
+```
+
+Важно: в JSON не нужно экранировать `$PORT`. Должно быть:
+
+```json
+"startCommand": "pnpm -C apps/client preview --host 0.0.0.0 --port $PORT"
+```
