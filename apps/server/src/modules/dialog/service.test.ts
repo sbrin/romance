@@ -524,3 +524,103 @@ test('dialog loader strips .mp4 extension from video fieldValue', () => {
   assert.equal(step.videoByRole.female, 's1m1')
   assert.equal(step.videoByRole.male, undefined)
 })
+
+test('dialog loader maps waiter video to both roles', () => {
+  const baseDir = createTempDir()
+  const videoDir = path.join(baseDir, 'videos')
+  mkdirSync(videoDir)
+  writeVideo(videoDir, 'scenariom0')
+  writeVideo(videoDir, 'scenariof0')
+  writeVideo(videoDir, 'w_1')
+
+  const scenario = {
+    conv1: [
+      {
+        id: 'step-12345678',
+        data: { actor: { name: 'He' }, choices: ['Да'] },
+        actor: { name: 'He' },
+        text: '',
+        next: ['step-waiter1'],
+        prev: [],
+      },
+      {
+        id: 'step-waiter1',
+        data: {
+          actor: { name: 'waiter' },
+          fields: [{ fieldName: 'video', fieldValue: 'w_1.mp4' }],
+        },
+        actor: { name: 'waiter' },
+        text: 'Ваш счет',
+        next: 'end',
+        prev: ['step-12345678'],
+      },
+    ],
+  }
+
+  const scenarioPath = writeScenario(baseDir, scenario)
+  const service = createDialogService({
+    scenarioPath,
+    videoDirectory: videoDir,
+    logger: { error: () => { } },
+  })
+
+  const step = service.getStep('step-waiter1')
+  assert.equal(step.videoByRole.male, 'w_1')
+  assert.equal(step.videoByRole.female, 'w_1')
+
+  const maleStep = service.createSessionStepEvent({
+    sessionId: 'session-12345678',
+    stepId: 'step-waiter1',
+    role: USER_ROLE.MALE,
+    turnDeviceId: 'device-12345678',
+  })
+  assert.equal(maleStep.payload.videoUrl, 'w_1.mp4')
+
+  const femaleStep = service.createSessionStepEvent({
+    sessionId: 'session-12345678',
+    stepId: 'step-waiter1',
+    role: USER_ROLE.FEMALE,
+    turnDeviceId: 'device-87654321',
+  })
+  assert.equal(femaleStep.payload.videoUrl, 'w_1.mp4')
+})
+
+test('dialog loader accepts string actor for terminal nodes', () => {
+  const baseDir = createTempDir()
+  const videoDir = path.join(baseDir, 'videos')
+  mkdirSync(videoDir)
+  writeVideo(videoDir, 'scenariom0')
+  writeVideo(videoDir, 'scenariof0')
+
+  const scenario = {
+    conv1: [
+      {
+        id: 'step-12345678',
+        data: { actor: { name: 'He' } },
+        actor: { name: 'He' },
+        text: '',
+        next: ['step-with-string-actor'],
+        prev: [],
+      },
+      {
+        id: 'step-with-string-actor',
+        data: { actor: 'Any string' },
+        actor: 'Any string',
+        text: '',
+        next: 'end',
+        prev: ['step-12345678'],
+      },
+    ],
+  }
+
+  const scenarioPath = writeScenario(baseDir, scenario)
+  const service = createDialogService({
+    scenarioPath,
+    videoDirectory: videoDir,
+    logger: { error: () => { } },
+  })
+
+  const step = service.getStep('step-with-string-actor')
+  assert.equal(step.actor.name, 'He') // Default mapping
+  assert.equal(step.isTerminal, true)
+})

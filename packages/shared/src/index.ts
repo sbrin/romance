@@ -131,15 +131,18 @@ export type SessionId = z.infer<typeof SessionIdSchema>;
 export const StepIdSchema = z.string().min(8);
 export type StepId = z.infer<typeof StepIdSchema>;
 
-export const ScenarioActorNameSchema = z.enum(['He', 'She']);
+export const ScenarioActorNameSchema = z.enum(['He', 'She', 'waiter']);
 export type ScenarioActorName = z.infer<typeof ScenarioActorNameSchema>;
 
-export const ScenarioActorSchema = z
-  .object({
-    name: ScenarioActorNameSchema,
-    avatarPath: z.string().optional(),
-  })
-  .passthrough();
+export const ScenarioActorSchema = z.union([
+  z
+    .object({
+      name: ScenarioActorNameSchema,
+      avatarPath: z.string().optional(),
+    })
+    .passthrough(),
+  z.string(),
+]);
 export type ScenarioActor = z.infer<typeof ScenarioActorSchema>;
 
 export const ChoiceIdSchema = z.string().regex(/^\d+$/);
@@ -174,7 +177,28 @@ export const ScenarioNodeSchema = z
     prev: z.array(StepIdSchema),
     next: z.union([z.array(StepIdSchema), z.literal('end')]),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((data, ctx) => {
+    if (data.next !== 'end') {
+      if (typeof data.actor === 'string') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.invalid_type,
+          expected: 'object',
+          received: 'string',
+          path: ['actor'],
+        });
+      }
+      // ScenarioNodeDataSchema also has actor, check it too
+      if (typeof data.data.actor === 'string') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.invalid_type,
+          expected: 'object',
+          received: 'string',
+          path: ['data', 'actor'],
+        });
+      }
+    }
+  });
 export type ScenarioNode = z.infer<typeof ScenarioNodeSchema>;
 
 export const SessionActorSchema = z.object({

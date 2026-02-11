@@ -46,6 +46,38 @@ test('ScenarioNodeSchema accepts terminal node with next: end', () => {
   assert.equal(parsed.success, true)
 })
 
+test('ScenarioNodeSchema accepts terminal node with string actor when next: end', () => {
+  const payload = {
+    id: 'step-12345678',
+    data: {
+      actor: 'Some string',
+    },
+    actor: 'Some string',
+    text: '',
+    next: 'end',
+    prev: ['step-abcdef12'],
+  }
+
+  const parsed = ScenarioNodeSchema.safeParse(payload)
+  assert.equal(parsed.success, true, 'Should accept string actor when next is end')
+})
+
+test('ScenarioNodeSchema rejects string actor when next is not end', () => {
+  const payload = {
+    id: 'step-12345678',
+    data: {
+      actor: 'Some string',
+    },
+    actor: 'Some string',
+    text: '',
+    next: ['step-87654321'],
+    prev: [],
+  }
+
+  const parsed = ScenarioNodeSchema.safeParse(payload)
+  assert.equal(parsed.success, false, 'Should reject string actor when next is not end')
+})
+
 test('ScenarioNodeSchema rejects invalid actor name', () => {
   const payload = {
     id: 'step-12345678',
@@ -58,6 +90,20 @@ test('ScenarioNodeSchema rejects invalid actor name', () => {
 
   const parsed = ScenarioNodeSchema.safeParse(payload)
   assert.equal(parsed.success, false)
+})
+
+test('ScenarioNodeSchema accepts waiter actor name', () => {
+  const payload = {
+    id: 'step-12345678',
+    data: { actor: { name: 'waiter' } },
+    actor: { name: 'waiter' },
+    text: 'Принес счет',
+    next: 'end',
+    prev: ['step-abcdef12'],
+  }
+
+  const parsed = ScenarioNodeSchema.safeParse(payload)
+  assert.equal(parsed.success, true)
 })
 
 test('SessionStepEventSchema validates event payload with index-based choice IDs', () => {
@@ -104,4 +150,19 @@ test('SessionStepEventSchema rejects non-numeric choice id', () => {
 
   const parsed = SessionStepEventSchema.safeParse(payload)
   assert.equal(parsed.success, false)
+})
+
+test('SessionStepEventSchema accepts waiter actor in payload', () => {
+  const payload = {
+    sessionId: 'session-12345678',
+    stepId: 'step-12345678',
+    actor: { name: 'waiter' },
+    bubbleText: '',
+    choices: [],
+    videoUrl: 'w_1.mp4',
+    turnDeviceId: 'device-12345678',
+  }
+
+  const parsed = SessionStepEventSchema.safeParse(payload)
+  assert.equal(parsed.success, true)
 })

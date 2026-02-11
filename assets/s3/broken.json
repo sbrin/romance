@@ -1,0 +1,179 @@
+{
+    "826670E22F5F47009BC44C0DF440A246": [
+        {
+            "type": "Text",
+            "id": "950F49715D65464CA8F267532ECE656A",
+            "nodeType": "dialogNode",
+            "data": {
+                "actor": {
+                    "name": "waiter"
+                },
+                "speech": "УЙТИ!",
+                "actorList": [
+                    {
+                        "name": "waiter"
+                    },
+                    {
+                        "name": "She"
+                    },
+                    {
+                        "name": "He"
+                    }
+                ],
+                "fieldList": [
+                    {
+                        "name": "video",
+                        "type": "string"
+                    }
+                ]
+            },
+            "actor": {
+                "name": "waiter"
+            },
+            "text": "УЙТИ!",
+            "next": "end",
+            "prev": [
+                "BCECB191BAD04A908343DD41E66CE386",
+                "665A9C36145C4CA98D786E3F49D97124",
+                "F03F57873DEC4D13A217A420AF0A3D43",
+                "6F00742669FC44468C55BD097D51B1D0",
+                "4C412CAF576A4D52826DA9D104B30CC6",
+                "FC39E1E49AF94FFE87E24229921E8340",
+                "192FEA8E43794EF4A163889D566069CB",
+                "4E7FBC7F5A014B9EA5A82CA5700DEF7D",
+                "B3931413E7B642D1BB2D3B0FF87049C4",
+                "4372C19410C947998A12331F15085A96",
+                "6144E461643041BF968268B8D5CF9785",
+                "3B2DC08BA89B49DD82F71D3E39C6EB04",
+                "A441C9FA6C5244AC87FE2D5688F635A1",
+                "9F27C3394D8C40D0B47201CCAB06D73A",
+                "648B72C37C7D447EAECB7B1E117190B0",
+                "1836139E6AAA4975814E1FFE0E4BB4AB",
+                "EBB16C3DAED645289BE90ECE3B037DB2",
+                "A3C0B0C272774806ACBBB4B937343F64",
+                "7D1F439BCBC7421DA5285524A34E8F8F",
+                "7436401E81364051BB103830B7CA58B1",
+                "06DF861A25CE4E738705BDC54EA5538F",
+                "74994B45300846049CBA4F4CA0CE1926",
+                "9F33A2FC430D4354990527F0DE04AF85",
+                "594E76E3F6B34AB7BC55661F64ECE747"
+            ],
+            "meta": {
+                "type": "dialogNode",
+                "conversationId": "826670E22F5F47009BC44C0DF440A246",
+                "position": {
+                    "x": 8719.10660137976,
+                    "y": -1214.3760319329817
+                },
+                "selected": false
+            }
+        },
+        {
+            "type": "Text",
+            "id": "594E76E3F6B34AB7BC55661F64ECE747",
+            "nodeType": "dialogNode",
+            "data": {
+                "actor": "",
+                "speech": "test",
+                "actorList": [
+                    {
+                        "name": "waiter"
+                    },
+                    {
+                        "name": "She"
+                    },
+                    {
+                        "name": "He"
+                    }
+                ],
+                "fieldList": [
+                    {
+                        "name": "video",
+                        "type": "string"
+                    }
+                ],
+                "choices": [
+                    "a",
+                    "b"
+                ]
+            },
+            "actor": "",
+            "text": "test",
+            "next": [
+                "950F49715D65464CA8F267532ECE656A",
+                "950F49715D65464CA8F267532ECE656A"
+            ],
+            "prev": [],
+            "meta": {
+                "type": "dialogNode",
+                "conversationId": "826670E22F5F47009BC44C0DF440A246",
+                "position": {
+                    "x": 6225.351872464246,
+                    "y": -6682.08330127992
+                },
+                "selected": false
+            }
+        }
+    ],
+    "A5929ABF300748B382E9239E730E7733": [
+        {
+            "type": "Text",
+            "id": "753DCDCBE9A54AEBA22227244CB4348C",
+            "nodeType": "dialogNode",
+            "data": {
+                "actor": {
+                    "name": "She"
+                },
+                "speech": "",
+                "actorList": [
+                    {
+                        "name": "waiter"
+                    },
+                    {
+                        "name": "She"
+                    },
+                    {
+                        "name": "He"
+                    }
+                ],
+                "fieldList": [
+                    {
+                        "name": "video",
+                        "type": "string"
+                    }
+                ],
+                "choices": [
+                    "ты не оч. пока. ",
+                    "ты супер. давай есть. "
+                ],
+                "fields": [
+                    {
+                        "fieldName": "video",
+                        "fieldValue": "he_angry"
+                    }
+                ]
+            },
+            "actor": {
+                "name": "She"
+            },
+            "text": "",
+            "fields": [
+                {
+                    "fieldName": "video",
+                    "fieldValue": "he_angry"
+                }
+            ],
+            "next": "end",
+            "prev": [],
+            "meta": {
+                "type": "dialogNode",
+                "conversationId": "A5929ABF300748B382E9239E730E7733",
+                "position": {
+                    "x": 6959.531598476707,
+                    "y": 8243.52308822884
+                },
+                "selected": false
+            }
+        }
+    ]
+}

@@ -152,7 +152,11 @@ const transformNode = (
     const videoField = raw.data.fields?.find((f) => f.fieldName === 'video')
     if (videoField) {
       const videoId = videoField.fieldValue.replace(/\.mp4$/, '')
-      if (raw.actor.name === 'She') {
+      const actorName = typeof raw.actor === 'string' ? 'He' : raw.actor.name
+      if (actorName === 'waiter') {
+        videoByRole.male = videoId
+        videoByRole.female = videoId
+      } else if (actorName === 'She') {
         videoByRole.female = videoId
       } else {
         videoByRole.male = videoId
@@ -162,7 +166,10 @@ const transformNode = (
 
   return {
     id: raw.id,
-    actor: { name: raw.actor.name, avatarPath: raw.actor.avatarPath },
+    actor:
+      typeof raw.actor === 'string'
+        ? { name: 'He' }
+        : { name: raw.actor.name, avatarPath: raw.actor.avatarPath },
     choices,
     videoByRole,
     isTerminal,

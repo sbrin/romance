@@ -25,11 +25,12 @@
 
 ### scenario_actor_name
 
-- `'He' | 'She'`
+- `'He' | 'She' | 'waiter'`
 - Источник: файл сценария (напр. `assets/s2/s2.json`) → поле `actor.name`.
 - Маппинг на роль для определения хода:
   - `He` → `MALE` (говорящий)
   - `She` → `FEMALE` (говорящий)
+  - `waiter` → служебный actor без отдельной turn-логики на этом этапе.
 
 ### step_id
 
@@ -58,8 +59,9 @@
 - object с ключами `male` и/или `female`.
 - Значение: `videoId` (например, `"s1m1"`).
 - **Вычисляется при загрузке** из поля `data.fields [{fieldName:"video", fieldValue:"<id>.mp4"}]`:
-  - Actor `She` → видео показывается MALE (`videoByRole.male = id`).
-  - Actor `He` → видео показывается FEMALE (`videoByRole.female = id`).
+  - Actor `She` → видео показывается FEMALE (`videoByRole.female = id`).
+  - Actor `He` → видео показывается MALE (`videoByRole.male = id`).
+  - Actor `waiter` → видео показывается обоим (`videoByRole.male = id`, `videoByRole.female = id`).
 - Root-нода: видео генерируется из имени сценария (`<name>m0`, `<name>f0`).
 - Если для роли значение отсутствует — **видео для этой роли не обновляется**.
 
@@ -380,7 +382,7 @@
   sessionId: string;
   stepId: string;
   actor: {
-    name: 'He' | 'She';
+    name: 'He' | 'She' | 'waiter';
     avatarPath?: string;
   };
   bubbleText: string;
